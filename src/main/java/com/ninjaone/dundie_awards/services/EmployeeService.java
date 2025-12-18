@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cloud.stream.function.StreamBridge;
@@ -28,6 +29,8 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class EmployeeService {
 
+    private static final String ACTIVITY_DUNDIE_AWARDS_INCREMENTED = "DUNDIE_AWARDS_INCREMENTED";
+
     @Autowired
     private EmployeeRepository employeeRepository;
 
@@ -36,6 +39,9 @@ public class EmployeeService {
 
     @Autowired
     private StreamBridge streamBridge;
+
+    @Value("${spring.cloud.stream.binding.out}")
+    private String activityBindingName;
 
     // TODO: Use transactional template for complex transactions
     // public EmployeeService(TransactionalTemplate transactionalTemplate) {
@@ -84,6 +90,7 @@ public class EmployeeService {
         return employeeRepository.save(newEmployee);
     }
 
+    // TODO: Could use cache for organization lookup
     private Organization getOrganizationData(Long organizationId) {
         Organization organization = organizationRepository.findById(organizationId).orElseThrow(() -> {
             LookupException lookupException = new LookupException("The organization was not found");
@@ -203,8 +210,7 @@ public class EmployeeService {
         evictCachesAfterUpdate(organization.getId());
 
         // Send activity event to save it asynchronously
-        // FIXME: bindingname should be an spring property and DUNDIE_AWARDS_INCREMENTED should be an constant
-        streamBridge.send("activity-out-0", ActivityInfo.builder().occuredAt(LocalDateTime.now()).event("DUNDIE_AWARDS_INCREMENTED: " + added).build());
+        streamBridge.send(activityBindingName, ActivityInfo.builder().occuredAt(LocalDateTime.now()).event(ACTIVITY_DUNDIE_AWARDS_INCREMENTED + ": " + added).build());
         return added;
     }
     

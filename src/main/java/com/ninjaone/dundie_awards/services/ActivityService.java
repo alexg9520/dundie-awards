@@ -41,10 +41,10 @@ public class ActivityService {
      * @param activityInfo the activity info to save
      * @return the saved Activity
      */
-    public Activity save(ActivityInfo activityInfo) {
+    public ActivityInfo save(ActivityInfo activityInfo) {
         checkForNullValue(activityInfo, "ActivityInfo is null", "No activity info provided");
         Activity newActivity = new Activity(activityInfo.occuredAt(), activityInfo.event());
-        return activityRepository.save(newActivity);
+        return createActivityInfoFromActivity(activityRepository.save(newActivity));
     }
 
     /**
