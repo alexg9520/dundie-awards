@@ -4,13 +4,19 @@ import com.ninjaone.dundie_awards.model.Employee;
 import com.ninjaone.dundie_awards.model.Organization;
 import com.ninjaone.dundie_awards.repository.EmployeeRepository;
 import com.ninjaone.dundie_awards.repository.OrganizationRepository;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 @Component
 public class DataLoader implements CommandLineRunner {
 
+    @Value("${app.init-test-data:false}")
+    private boolean testInitData;
+
     private final EmployeeRepository employeeRepository;
+    
     private final OrganizationRepository organizationRepository;
 
     public DataLoader(EmployeeRepository employeeRepository, OrganizationRepository organizationRepository) {
@@ -24,7 +30,7 @@ public class DataLoader implements CommandLineRunner {
         // employeeRepository.deleteAll();
         // organizationRepository.deleteAll();
 
-        if (employeeRepository.count() == 0) {
+        if (testInitData && employeeRepository.count() == 0) {
             Organization organizationPikashu = new Organization("Pikashu");
             organizationRepository.save(organizationPikashu);
 

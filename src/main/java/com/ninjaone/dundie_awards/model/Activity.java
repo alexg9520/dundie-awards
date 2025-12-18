@@ -27,6 +27,10 @@ public class Activity {
         this.event = event;
     }
 
+    public long getId() {
+        return id;
+    }    
+
     public LocalDateTime getOccuredAt() {
         return occuredAt;
     }

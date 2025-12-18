@@ -27,13 +27,41 @@ spring:
 #    # Hibernate ddl auto (create, create-drop, validate, update)
 #    hibernate:
 #      ddl-auto: update
+
   thymeleaf: # Thymeleaf
     cache: false
-    mode: HTML
+    mode: HTMLs
     encoding: UTF-8
     prefix: file:src/main/resources/static/
+
   web:
     resources:
       static-locations: file:src/main/resources/static/
       cache:
         period: 0
+
+  redis:
+    host: localhost
+
+  cloud:
+    stream:
+      bindings:
+        activity-out-0:
+          destination: activity
+          content-type: application/json
+        activity-in-0:
+          destination: activity
+          group: activity-consumer-group
+          content-type: application/json
+      kafka:
+        binder:
+          brokers: localhost:9092
+        bindings:
+          activity-in-0:
+            consumer:
+              ackMode: MANUAL
+              maxAttempts: 3
+              backOffInitialInterval: 2000
+              enableDlq: true
+              dlqName: activity-dlq
+   

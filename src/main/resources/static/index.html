@@ -14,8 +14,11 @@
     </style>
 </head>
 <body>
-<div th:switch="${employees}" class="mt-5">
-    <p th:case="null" class="alert alert-warning">No employees</p>
+<div class="mt-5">
+    <h4 class="mb-3">Total Dundie Awards: <span th:text="${totalDundieAwards}"></span></h4>
+</div>    
+<div th:switch="${#lists.size(employees)}" class="mt-5">
+    <div th:case="0" class="alert alert-warning">No employees</div>
     <div th:case="*">
         <h2 class="mb-3">Employees</h2>
         <table class="table table-striped">
@@ -40,8 +43,8 @@
         </table>
     </div>
 </div>
-<div th:switch="${activities}" class="mt-5">
-    <p th:case="null" class="alert alert-warning">No activities</p>
+<div th:switch="${#lists.size(activities)}" class="mt-5">
+    <p th:case="0" class="alert alert-warning">No activities</p>
     <div th:case="*">
         <h2 class="mb-3">Activity Log</h2>
         <table class="table table-striped">
