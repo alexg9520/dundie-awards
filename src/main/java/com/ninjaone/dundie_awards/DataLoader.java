@@ -30,6 +30,7 @@ public class DataLoader implements CommandLineRunner {
         // employeeRepository.deleteAll();
         // organizationRepository.deleteAll();
 
+        // Only add data if the flag is set and there are no employees
         if (testInitData && employeeRepository.count() == 0) {
             Organization organizationPikashu = new Organization("Pikashu");
             organizationRepository.save(organizationPikashu);

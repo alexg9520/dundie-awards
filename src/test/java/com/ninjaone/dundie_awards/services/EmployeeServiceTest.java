@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
@@ -107,13 +106,13 @@ class EmployeeServiceTest {
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(testEmployee));
 
         // Act
-        Optional<EmployeeInfo> result = employeeService.getEmployeeInfoById(1L);
+        EmployeeInfo result = employeeService.getEmployeeInfoById(1L);
 
         // Assert
-        assertThat(result).isPresent();
-        assertEquals("Michael", result.get().firstName());
-        assertEquals("Scott", result.get().lastName());
-        assertEquals(5, result.get().dundieAwards());
+        assertNotNull(result);
+        assertEquals("Michael", result.firstName());
+        assertEquals("Scott", result.lastName());
+        assertEquals(5, result.dundieAwards());
         verify(employeeRepository, times(1)).findById(1L);
     }
 
@@ -220,11 +219,11 @@ class EmployeeServiceTest {
         when(employeeRepository.save(any(Employee.class))).thenReturn(testEmployee);
 
         // Act
-        Optional<EmployeeInfo> result = employeeService.update(1L, updatedInfo);
+        EmployeeInfo result = employeeService.update(1L, updatedInfo);
 
         // Assert
-        assertTrue(result.isPresent());
-        assertEquals("Scarn", result.get().lastName());
+        assertNotNull(result);
+        assertEquals("Scarn", result.lastName());
         verify(employeeRepository, times(1)).findById(1L);
         verify(employeeRepository, times(1)).save(any(Employee.class));
     }
@@ -273,11 +272,11 @@ class EmployeeServiceTest {
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(testEmployee));
 
         // Act
-        Optional<EmployeeInfo> result = employeeService.delete(1L);
+        EmployeeInfo result = employeeService.delete(1L);
 
         // Assert
-        assertTrue(result.isPresent());
-        assertEquals("Michael", result.get().firstName());
+        assertNotNull(result);
+        assertEquals("Michael", result.firstName());
         verify(employeeRepository, times(1)).findById(1L);
         verify(employeeRepository, times(1)).delete(testEmployee);
     }

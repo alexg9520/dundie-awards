@@ -46,6 +46,7 @@ class ActivityServiceTest {
     private ActivityService activityService;
 
     private Activity testActivity;
+    
     private ActivityInfo testActivityInfo;
 
     @BeforeEach

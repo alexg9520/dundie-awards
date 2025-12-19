@@ -3,7 +3,6 @@ package com.ninjaone.dundie_awards.controller;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -23,7 +22,7 @@ import com.ninjaone.dundie_awards.model.EmployeeInfo;
 import com.ninjaone.dundie_awards.model.OrganizationInfo;
 import com.ninjaone.dundie_awards.services.EmployeeService;
 
-// FIXME: Needs security
+// TODO: Needs security
 @Controller
 @RequestMapping()
 public class EmployeeController {
@@ -36,6 +35,7 @@ public class EmployeeController {
     @ResponseBody
     // TODO: needs to support pagination
     public List<EmployeeInfo> getAllEmployees() {
+        // Return list of all employees
         return employeeService.findAll();
     }
 
@@ -44,6 +44,7 @@ public class EmployeeController {
     @ResponseBody
     // TODO: needs to support pagination
     public Employee createEmployee(@RequestBody EmployeeInfo employee) {
+        // Save and return the new employee
         return employeeService.save(employee);
     }
 
@@ -51,38 +52,29 @@ public class EmployeeController {
     @GetMapping("/employees/{id}")
     @ResponseBody
     public ResponseEntity<EmployeeInfo> getEmployeeById(@PathVariable Long id) {
-        Optional<EmployeeInfo> optionalEmployee = employeeService.getEmployeeInfoById(id);
-        if (optionalEmployee.isPresent()) {
-            return ResponseEntity.ok(optionalEmployee.get());
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+        // get employee info by id
+        EmployeeInfo employeeInfo = employeeService.getEmployeeInfoById(id);
+        // return response entity, runtime exception will be thrown if not found
+        return ResponseEntity.ok(employeeInfo);
     }
 
     // update employee rest api
     @PutMapping("/employees/{id}")
     @ResponseBody
     public ResponseEntity<EmployeeInfo> updateEmployee(@PathVariable Long id, @RequestBody EmployeeInfo employeeDetails) {
-        Optional<EmployeeInfo> updatedEmployee = employeeService.update(id, employeeDetails);
-        if (!updatedEmployee.isPresent()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-
-        return ResponseEntity.ok(updatedEmployee.get());
+        // update employee and get updated info
+        EmployeeInfo updatedEmployee = employeeService.update(id, employeeDetails);
+        // return response entity, runtime exception will be thrown if not found
+        return ResponseEntity.ok(updatedEmployee);
     }
 
     // delete employee rest api
     @DeleteMapping("/employees/{id}")
     @ResponseBody
     public ResponseEntity<Map<String, Boolean>> deleteEmployee(@PathVariable Long id) {
-        if (id == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        Optional<EmployeeInfo> deletedEmployee = employeeService.delete(id);
-        if (!deletedEmployee.isPresent()) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-
+        // delete employee by id
+        employeeService.delete(id);
+        // return response that delete succeeded, runtime exception will be thrown if not successful
         Map<String, Boolean> response = new HashMap<>();
         response.put("deleted", Boolean.TRUE);
         return ResponseEntity.ok(response);
@@ -92,25 +84,19 @@ public class EmployeeController {
     @PostMapping("/give-dundie-awards/{organizationId}")
     @ResponseBody
     public ResponseEntity<OrganizationInfo> giveDundieAwards(@PathVariable Long organizationId) {
-        if (organizationId == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }        
-        Long updatedCount = employeeService.incrementDundieAwardsForAll(organizationId);
-        if (updatedCount > 0) {
-            return new ResponseEntity<>(HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        } 
+        // increment dundie awards for all employees in the organization
+        employeeService.incrementDundieAwardsForAll(organizationId);
+        // return response entity, runtime exception will be thrown if not found
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     // get total dundie awards for an organization
     @GetMapping("/get-dundie-awards/{organizationId}")
     @ResponseBody
     public ResponseEntity<Long> getDundieAwards(@PathVariable Long organizationId) {
-        if (organizationId == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+        // get total dundie awards by organization id
         Long totalAwards = employeeService.getTotalAwardsByOrganization(organizationId);
+        // return response entity, runtime exception will be thrown if not found
         return ResponseEntity.ok(totalAwards);
     }
 
@@ -118,7 +104,7 @@ public class EmployeeController {
     @GetMapping("/get-dundie-awards")
     @ResponseBody
     public ResponseEntity<Long> getTotalDundieAwards() {
-        Long totalAwards = employeeService.getTotalAwards();       
-        return ResponseEntity.ok(totalAwards);
+        // get total dundie awards for all organizations
+        return ResponseEntity.ok(employeeService.getTotalAwards());
     }
 }

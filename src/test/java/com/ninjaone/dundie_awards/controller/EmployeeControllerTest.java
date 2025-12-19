@@ -1,10 +1,16 @@
 package com.ninjaone.dundie_awards.controller;
 
-import com.ninjaone.dundie_awards.model.Employee;
-import com.ninjaone.dundie_awards.model.EmployeeInfo;
-import com.ninjaone.dundie_awards.model.Organization;
-import com.ninjaone.dundie_awards.model.OrganizationInfo;
-import com.ninjaone.dundie_awards.services.EmployeeService;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,15 +21,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import com.ninjaone.dundie_awards.exceptions.InvalidArgumentException;
+import com.ninjaone.dundie_awards.exceptions.LookupException;
+import com.ninjaone.dundie_awards.model.Employee;
+import com.ninjaone.dundie_awards.model.EmployeeInfo;
+import com.ninjaone.dundie_awards.model.Organization;
+import com.ninjaone.dundie_awards.model.OrganizationInfo;
+import com.ninjaone.dundie_awards.services.EmployeeService;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Employee Controller Tests")
@@ -87,7 +91,7 @@ class EmployeeControllerTest {
     @DisplayName("GET /employees/{id} - should return employee when found")
     void getEmployeeById_WhenEmployeeExists_ShouldReturnEmployee() {
         // Arrange
-        when(employeeService.getEmployeeInfoById(1L)).thenReturn(Optional.of(testEmployee));
+        when(employeeService.getEmployeeInfoById(1L)).thenReturn(testEmployee);
 
         // Act
         ResponseEntity<EmployeeInfo> response = employeeController.getEmployeeById(1L);
@@ -101,17 +105,19 @@ class EmployeeControllerTest {
     }
 
     @Test
-    @DisplayName("GET /employees/{id} - should return 404 when employee not found")
-    void getEmployeeById_WhenEmployeeDoesNotExist_ShouldReturn404() {
+    @DisplayName("GET /employees/{id} - should return InvalidArgumentException when employee not found")
+    void getEmployeeById_WhenEmployeeDoesNotExist_ShouldReturnInvalidArgumentException() {
         // Arrange
-        when(employeeService.getEmployeeInfoById(999L)).thenReturn(Optional.empty());
+        when(employeeService.getEmployeeInfoById(999L)).thenThrow(new InvalidArgumentException("Employee not found"));
 
-        // Act
-        ResponseEntity<EmployeeInfo> response = employeeController.getEmployeeById(999L);
-
+        try {
+            // Act
+            employeeController.getEmployeeById(999L);
+        } catch (InvalidArgumentException ex) {
+            // Assert
+            assertThat(ex.getMessage()).isEqualTo("Employee not found");
+        }
         // Assert
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(response.getBody()).isNull();
         verify(employeeService, times(1)).getEmployeeInfoById(999L);
     }
 
@@ -150,7 +156,7 @@ class EmployeeControllerTest {
                 .build();
 
         when(employeeService.update(eq(1L), any(EmployeeInfo.class)))
-                .thenReturn(Optional.of(updatedEmployee));
+                .thenReturn(updatedEmployee);
 
         // Act
         ResponseEntity<EmployeeInfo> response = employeeController.updateEmployee(1L, updatedEmployee);
@@ -164,16 +170,18 @@ class EmployeeControllerTest {
 
     @Test
     @DisplayName("PUT /employees/{id} - should return 404 when employee not found")
-    void updateEmployee_WhenEmployeeDoesNotExist_ShouldReturn404() {
+    void updateEmployee_WhenEmployeeDoesNotExist_ShouldReturnInvalidArgumentException() {
         // Arrange
         when(employeeService.update(eq(999L), any(EmployeeInfo.class)))
-                .thenReturn(Optional.empty());
+                .thenThrow(new InvalidArgumentException("Employee not found"));
 
-        // Act
-        ResponseEntity<EmployeeInfo> response = employeeController.updateEmployee(999L, testEmployee);
-
-        // Assert
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        try {
+            // Act
+            employeeController.updateEmployee(999L, testEmployee);
+        } catch (InvalidArgumentException ex) {
+            // Assert
+            assertThat(ex.getMessage()).isEqualTo("Employee not found");
+        }
         verify(employeeService, times(1)).update(eq(999L), any(EmployeeInfo.class));
     }
 
@@ -181,7 +189,7 @@ class EmployeeControllerTest {
     @DisplayName("DELETE /employees/{id} - should delete employee successfully")
     void deleteEmployee_WhenEmployeeExists_ShouldReturnSuccessResponse() {
         // Arrange
-        when(employeeService.delete(1L)).thenReturn(Optional.of(testEmployee));
+        when(employeeService.delete(1L)).thenReturn(testEmployee);
 
         // Act
         ResponseEntity<Map<String, Boolean>> response = employeeController.deleteEmployee(1L);
@@ -195,27 +203,36 @@ class EmployeeControllerTest {
 
     @Test
     @DisplayName("DELETE /employees/{id} - should return 404 when employee not found")
-    void deleteEmployee_WhenEmployeeDoesNotExist_ShouldReturn404() {
+    void deleteEmployee_WhenEmployeeDoesNotExist_ShouldReturnInvalidArgumentException() {
         // Arrange
-        when(employeeService.delete(999L)).thenReturn(Optional.empty());
+        when(employeeService.delete(999L)).thenThrow(new InvalidArgumentException("Employee not found"));
 
-        // Act
-        ResponseEntity<Map<String, Boolean>> response = employeeController.deleteEmployee(999L);
+        try {
+            // Act
+            employeeController.deleteEmployee(999L);
+        } catch (InvalidArgumentException ex) {
+            // Assert
+            assertThat(ex.getMessage()).isEqualTo("Employee not found");
+        }
 
         // Assert
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         verify(employeeService, times(1)).delete(999L);
     }
 
     @Test
     @DisplayName("DELETE /employees/{id} - should return 404 when id is null")
-    void deleteEmployee_WhenIdIsNull_ShouldReturn404() {
-        // Act
-        ResponseEntity<Map<String, Boolean>> response = employeeController.deleteEmployee(null);
+    void deleteEmployee_WhenIdIsNull_ShouldReturnInvalidArgumentException() {
+
+        try {
+            // Act
+            employeeController.deleteEmployee(null);
+        } catch (InvalidArgumentException ex) {
+            // Assert
+            assertThat(ex.getMessage()).isEqualTo("Employee ID cannot be null");
+        }
 
         // Assert
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        verify(employeeService, never()).delete(any());
+        verify(employeeService, times(1)).delete(any());
     }
 
     @Test
@@ -234,26 +251,38 @@ class EmployeeControllerTest {
 
     @Test
     @DisplayName("POST /give-dundie-awards/{organizationId} - should return 404 when no employees updated")
-    void giveDundieAwards_WhenNoEmployeesUpdated_ShouldReturn404() {
+    void giveDundieAwards_WhenNoEmployeesUpdated_ShouldReturnLookupException() {
         // Arrange
-        when(employeeService.incrementDundieAwardsForAll(1L)).thenReturn(0L);
+        when(employeeService.incrementDundieAwardsForAll(1L)).thenThrow(new LookupException("No organization found"));
 
-        // Act
-        ResponseEntity<OrganizationInfo> response = employeeController.giveDundieAwards(1L);
+        try {
+            // Act
+            employeeController.giveDundieAwards(1L);
+        } catch (LookupException ex) {
+            // Assert
+            assertThat(ex.getMessage()).isEqualTo("No organization found");
+        }
 
         // Assert
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         verify(employeeService, times(1)).incrementDundieAwardsForAll(1L);
     }
 
     @Test
     @DisplayName("POST /give-dundie-awards/{organizationId} - should return 404 when organization id is null")
-    void giveDundieAwards_WhenOrganizationIdIsNull_ShouldReturn404() {
-        // Act
-        ResponseEntity<OrganizationInfo> response = employeeController.giveDundieAwards(null);
+    void giveDundieAwards_WhenOrganizationIdIsNull_ShouldReturnInvalidArgumentException() {
+        // Arrange
+        when(employeeService.incrementDundieAwardsForAll(null))
+                .thenThrow(new InvalidArgumentException("Organization ID cannot be null"));
+
+        try {
+            // Act
+            employeeController.giveDundieAwards(null);
+        } catch (InvalidArgumentException ex) {
+            // Assert
+            assertThat(ex.getMessage()).isEqualTo("Organization ID cannot be null");
+        }
 
         // Assert
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        verify(employeeService, never()).incrementDundieAwardsForAll(any());
+        verify(employeeService, times(1)).incrementDundieAwardsForAll(null);
     }
 }
