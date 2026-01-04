@@ -2,6 +2,8 @@ package com.ninjaone.dundie_awards.model;
 
 import java.time.LocalDateTime;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.NonNull;
 
@@ -9,6 +11,6 @@ import lombok.NonNull;
 @Builder(toBuilder = true)
 public record ActivityInfo(
     Long id,
-    @NonNull LocalDateTime occuredAt, 
-    @NonNull String event) {
+    @NotNull @NonNull LocalDateTime occuredAt, 
+    @NotBlank @NonNull String event) {
 }

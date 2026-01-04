@@ -1,14 +1,5 @@
 package com.ninjaone.dundie_awards.services;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
-
 import com.ninjaone.dundie_awards.exceptions.InvalidArgumentException;
 import com.ninjaone.dundie_awards.model.Employee;
 import com.ninjaone.dundie_awards.model.EmployeeInfo;
@@ -19,17 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public abstract class AbstractDundieService {
-    
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException  ex) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach(error -> {
-            FieldError field = ((FieldError) error);
-            errors.put(field.getField(), field.getDefaultMessage());
-        });
-        return errors;
-    }
 
     /**
      * Create EmployeeInfo from Employee entity

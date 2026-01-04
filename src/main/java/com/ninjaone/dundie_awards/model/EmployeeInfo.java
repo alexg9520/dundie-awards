@@ -1,5 +1,8 @@
 package com.ninjaone.dundie_awards.model;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.NonNull;
 
@@ -7,10 +10,10 @@ import lombok.NonNull;
 @Builder(toBuilder = true)
 public record EmployeeInfo (
     Long id,
-    @NonNull String firstName,
-    @NonNull String lastName,
-    @NonNull OrganizationInfo organization,
-    @NonNull Integer dundieAwards) {
+    @NotBlank @NonNull String firstName,
+    @NotBlank @NonNull String lastName,
+    @Valid @NotNull @NonNull OrganizationInfo organization,
+    @NotNull @NonNull Integer dundieAwards) {
 
     // Handle null dundieAwards by setting it to 0
     public static EmployeeInfoBuilder builder() {

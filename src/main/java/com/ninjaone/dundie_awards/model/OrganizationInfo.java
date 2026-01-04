@@ -1,5 +1,6 @@
 package com.ninjaone.dundie_awards.model;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
 import lombok.NonNull;
 
@@ -7,5 +8,5 @@ import lombok.NonNull;
 @Builder
 public record OrganizationInfo(
     Long id,
-    @NonNull String name) {
+    @NotBlank @NonNull String name) {
 }
