@@ -122,7 +122,7 @@ public class DundieAwardsExceptionHandler {
     }
 
     /**
-     * Handle generic Exception and log it so that it can be investigated
+     * Handle IllegalStateException - usually indicates missing parameters
      * 
      * @param ex the exception
      * @param request the HTTP request
