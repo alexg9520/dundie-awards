@@ -1,0 +1,48 @@
+# Test profile configuration for integration tests
+spring:
+  application:
+    name: dundie-awards-test
+  
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driverClassName: org.h2.Driver
+    username: sa
+    password: 
+  
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+  
+  h2:
+    console:
+      enabled: false
+  
+  # Disable Kafka for tests
+  kafka:
+    bootstrap-servers: localhost:9092
+  
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: localhost:9092
+      bindings:
+        activity-out-0:
+          destination: activity-topic-test
+
+# Cache configuration
+spring.cache.type: simple
+
+# Environment variable for testing
+DUNDIE_SPRING_CLOUD_STREAM_BINDING_OUT: activity-out-0
+
+logging:
+  level:
+    com.ninjaone.dundie_awards: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG

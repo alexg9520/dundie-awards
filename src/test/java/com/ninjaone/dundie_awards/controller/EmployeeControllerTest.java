@@ -23,6 +23,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.ActiveProfiles;
 
 import com.ninjaone.dundie_awards.exceptions.InvalidArgumentException;
 import com.ninjaone.dundie_awards.exceptions.LookupException;
@@ -32,6 +33,7 @@ import com.ninjaone.dundie_awards.services.EmployeeService;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Employee Controller Tests")
+@ActiveProfiles("test")
 class EmployeeControllerTest {
 
     @Mock
