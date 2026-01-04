@@ -30,13 +30,20 @@ public class OrganizationService extends AbstractDundieService {
      * @param organizationId the id of the organization
      * @return OrganizationInfo record
      * @throws LookupException if organization is not found
-     * @throws InvalidArgumentException 
+     * @throws InvalidArgumentException if organizationId is null
      */
     public OrganizationInfo getOrganizationInfo(Long organizationId) throws LookupException, InvalidArgumentException {
         checkForNullValue(organizationId, "Organization ID is null", "No organization ID was provided");
         return createOrganizationInfoFromOrganizationNoCheck(getOrganizationData(organizationId));
     }
 
+    /**
+     * Get organization entity by id with caching
+     * 
+     * @param organizationId the id of the organization
+     * @return Organization entity
+     * @throws LookupException if organization is not found
+     */
     @Cacheable(value="organization", key="#organizationId")
     protected Organization getOrganizationData(Long organizationId) throws LookupException {
         Optional<Organization> organization = organizationRepository.findById(organizationId);
@@ -52,22 +59,23 @@ public class OrganizationService extends AbstractDundieService {
      * Save a new organization
      * 
      * @param organization the OrganizationInfo to save
-     * @return the saved Organization entity
+     * @return the saved OrganizationInfo record
+     * @throws InvalidArgumentException if organization is null
      */
-    public OrganizationInfo save(OrganizationInfo organization) throws LookupException, InvalidArgumentException {
+    public OrganizationInfo save(OrganizationInfo organization) throws InvalidArgumentException {
         checkForNullValue(organization, "OrganizationInfo is null", "No organization information was provided");
         Organization newOrganizationData = new Organization(organization.name());
         return createOrganizationInfoFromOrganization(saveData(newOrganizationData));
     }
 
     /**
-     * Save a new organization
+     * Save organization data to the repository
      * 
-     * @param organization the OrganizationInfo to save
+     * @param newOrganizationData the Organization entity to save
      * @return the saved Organization entity
      */
     @Transactional
-    private Organization saveData(Organization newOrganizationData) throws LookupException, InvalidArgumentException {
+    private Organization saveData(Organization newOrganizationData) {
         return organizationRepository.save(newOrganizationData);
     }
 
@@ -75,7 +83,9 @@ public class OrganizationService extends AbstractDundieService {
      * Delete organization by id
      * 
      * @param id the id of the organization to delete
-     * @return OrganizationInfo of deleted organization or throws a runtime exception if not found
+     * @return OrganizationInfo of deleted organization
+     * @throws LookupException if organization is not found
+     * @throws InvalidArgumentException if id is null
      */
     @Transactional
     public OrganizationInfo delete(Long id) throws LookupException, InvalidArgumentException {
@@ -95,7 +105,9 @@ public class OrganizationService extends AbstractDundieService {
      * 
      * @param id the id of the organization to update
      * @param organizationInfo the new organization details
-     * @return OrganizationInfo record of updated organization or throws a runtime exception if not found
+     * @return OrganizationInfo record of updated organization
+     * @throws LookupException if organization is not found
+     * @throws InvalidArgumentException if id or organizationInfo is null
      */
     @Transactional
     public OrganizationInfo update(Long id, OrganizationInfo organizationInfo) throws LookupException, InvalidArgumentException {
@@ -121,7 +133,7 @@ public class OrganizationService extends AbstractDundieService {
         evictOrganizationCache(organizationId);
     }
 
-    /** Evict total awards by organization cache
+    /** Evict organization cache
      * 
      * @param organizationId the id of the organization
      */

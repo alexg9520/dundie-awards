@@ -42,14 +42,14 @@ public abstract class AbstractDundieService {
         return createEmployeeInfoFromEmployeeNoCheck(employee);
     }
 
-        /**
-     * Create EmployeeInfo from Employee entity
+    /**
+     * Create EmployeeInfo from Employee entity without null check
      * 
      * @param employee the Employee entity
      * @return EmployeeInfo record
      */
     protected EmployeeInfo createEmployeeInfoFromEmployeeNoCheck(Employee employee) {
-        // TODO: is this the best way to handle the organization info creation?
+        // Create nested OrganizationInfo from Employee's Organization
         EmployeeInfo employeeInfo = EmployeeInfo.builder()
                 .id(employee.getId())
                 .firstName(employee.getFirstName())

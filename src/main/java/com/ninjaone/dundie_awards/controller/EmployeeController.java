@@ -33,79 +33,123 @@ public class EmployeeController {
     @Autowired
     private EmployeeService employeeService;
 
-    // get all employees
+    /**
+     * Get all employees with pagination
+     * 
+     * @param page the page number
+     * @param size the page size
+     * @param sortBy the field to sort by
+     * @return List of EmployeeInfo
+     * @throws InvalidArgumentException if pagination parameters are invalid
+     */
     @GetMapping("/employees")
     @ResponseBody
     public List<EmployeeInfo> getAllEmployees(int page, int size, String sortBy) throws InvalidArgumentException {
-        // Return list of all employees
         return employeeService.findAll(page, size, sortBy).getContent();
     }
 
-    // create employee rest api
+    /**
+     * Create a new employee
+     * 
+     * @param employee the employee information
+     * @return the created EmployeeInfo
+     * @throws LookupException if organization is not found
+     * @throws InvalidArgumentException if employee data is invalid
+     */
     @PostMapping("/employees")
     @ResponseBody
     public EmployeeInfo createEmployee(@Valid @RequestBody EmployeeInfo employee) throws LookupException, InvalidArgumentException {
-        // Save and return the new employee
         return employeeService.save(employee);
     }
 
-    // get employee by id rest api
+    /**
+     * Get employee by id
+     * 
+     * @param id the employee id
+     * @return ResponseEntity containing the EmployeeInfo
+     * @throws LookupException if employee is not found
+     * @throws InvalidArgumentException if id is invalid
+     */
     @GetMapping("/employees/{id}")
     @ResponseBody
     public ResponseEntity<EmployeeInfo> getEmployeeById(@PathVariable Long id) throws LookupException, InvalidArgumentException {
-        // get employee info by id
         EmployeeInfo employeeInfo = employeeService.getEmployeeInfoById(id);
-        // return response entity, runtime exception will be thrown if not found
         return ResponseEntity.ok(employeeInfo);
     }
 
-    // update employee rest api
+    /**
+     * Update an existing employee
+     * 
+     * @param id the employee id
+     * @param employeeDetails the updated employee information
+     * @return ResponseEntity containing the updated EmployeeInfo
+     * @throws LookupException if employee is not found
+     * @throws InvalidArgumentException if data is invalid
+     */
     @PutMapping("/employees/{id}")
     @ResponseBody
     public ResponseEntity<EmployeeInfo> updateEmployee(@PathVariable Long id, @Valid @RequestBody EmployeeInfo employeeDetails) throws LookupException, InvalidArgumentException {
-        // update employee and get updated info
         EmployeeInfo updatedEmployee = employeeService.update(id, employeeDetails);
-        // return response entity, runtime exception will be thrown if not found
         return ResponseEntity.ok(updatedEmployee);
     }
 
-    // delete employee rest api
+    /**
+     * Delete an employee
+     * 
+     * @param id the employee id
+     * @return ResponseEntity with deletion confirmation
+     * @throws LookupException if employee is not found
+     * @throws InvalidArgumentException if id is invalid
+     */
     @DeleteMapping("/employees/{id}")
     @ResponseBody
     public ResponseEntity<Map<String, Boolean>> deleteEmployee(@PathVariable Long id) throws LookupException, InvalidArgumentException {
-        // delete employee by id
         employeeService.delete(id);
-        // return response that delete succeeded, runtime exception will be thrown if not successful
         Map<String, Boolean> response = new HashMap<>();
         response.put("deleted", Boolean.TRUE);
         return ResponseEntity.ok(response);
     }
 
-    // give dundie awards to every employee in an organization
+    /**
+     * Give dundie awards to every employee in an organization
+     * 
+     * @param organizationId the organization id
+     * @return ResponseEntity with OK status
+     * @throws LookupException if organization is not found
+     * @throws InvalidArgumentException if organizationId is invalid
+     */
     @PostMapping("/give-dundie-awards/{organizationId}")
     @ResponseBody
     public ResponseEntity<OrganizationInfo> giveDundieAwards(@PathVariable Long organizationId) throws LookupException, InvalidArgumentException {
-        // increment dundie awards for all employees in the organization
         employeeService.incrementDundieAwardsForAll(organizationId);
-        // return response entity, runtime exception will be thrown if not found
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    // get total dundie awards for an organization
+    /**
+     * Get total dundie awards for an organization
+     * 
+     * @param organizationId the organization id
+     * @return ResponseEntity containing the total awards count
+     * @throws LookupException if organization is not found
+     * @throws InvalidArgumentException if organizationId is invalid
+     */
     @GetMapping("/get-dundie-awards/{organizationId}")
     @ResponseBody
     public ResponseEntity<Long> getDundieAwards(@PathVariable Long organizationId) throws LookupException, InvalidArgumentException {
-        // get total dundie awards by organization id
         Long totalAwards = employeeService.getTotalAwardsByOrganization(organizationId);
-        // return response entity, runtime exception will be thrown if not found
         return ResponseEntity.ok(totalAwards);
     }
 
-    // get total dundie awards
+    /**
+     * Get total dundie awards across all organizations
+     * 
+     * @return ResponseEntity containing the total awards count
+     * @throws LookupException if an error occurs during retrieval
+     * @throws InvalidArgumentException if validation fails
+     */
     @GetMapping("/get-dundie-awards")
     @ResponseBody
     public ResponseEntity<Long> getTotalDundieAwards() throws LookupException, InvalidArgumentException {
-        // get total dundie awards for all organizations
         return ResponseEntity.ok(employeeService.getTotalAwards());
     }
 }

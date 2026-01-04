@@ -44,15 +44,13 @@ public class EmployeeService extends AbstractDundieService {
     @Value("${DUNDIE_SPRING_CLOUD_STREAM_BINDING_OUT}")
     private String activityBindingName;
 
-    // TODO: Use transactional template for complex transactions
-    // public EmployeeService(TransactionalTemplate transactionalTemplate) {
-    // }
-
     /**
      * Get EmployeeInfo by id
      * 
      * @param id the id of the employee
-     * @return EmployeeInfo record or throws a runtime exception if not found
+     * @return EmployeeInfo record
+     * @throws LookupException if employee is not found
+     * @throws InvalidArgumentException if id is null
      */
     public EmployeeInfo getEmployeeInfoById(Long id) throws LookupException, InvalidArgumentException {
         checkForNullValue(id, "Employee ID is null", "No employee ID was provided");
@@ -61,12 +59,13 @@ public class EmployeeService extends AbstractDundieService {
     }
 
     /**
-     * Find all employees
+     * Find all employees with pagination
      * 
      * @param page the page number
      * @param size the page size
      * @param sortBy the field to sort by
      * @return Page<EmployeeInfo> of all employees
+     * @throws InvalidArgumentException if pagination parameters are null
      */
     public Page<EmployeeInfo> findAll(int page, int size, String sortBy) throws InvalidArgumentException {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).ascending());
@@ -74,11 +73,11 @@ public class EmployeeService extends AbstractDundieService {
     }
 
     /**
-     * Find all employees
+     * Find all employees with pagination
      * 
      * @param pageable the pagination information
      * @return Page<EmployeeInfo> of all employees
-     * @throws InvalidArgumentException
+     * @throws InvalidArgumentException if pageable is null
      */
     public Page<EmployeeInfo> findAll(Pageable pageable) throws InvalidArgumentException {
         checkForNullValue(pageable, "Pageable is null", "No pagination information provided");
@@ -90,7 +89,9 @@ public class EmployeeService extends AbstractDundieService {
      * Save a new employee
      * 
      * @param employee the EmployeeInfo to save
-     * @return the saved Employee entity
+     * @return the saved EmployeeInfo record
+     * @throws LookupException if organization is not found
+     * @throws InvalidArgumentException if employee data is null or invalid
      */
     public EmployeeInfo save(EmployeeInfo employee) throws LookupException, InvalidArgumentException {
         checkForNullValue(employee, "EmployeeInfo is null", "No employee information was provided");
@@ -101,10 +102,12 @@ public class EmployeeService extends AbstractDundieService {
     }
 
     /**
-     * Save a new employee
+     * Save employee data to the repository
      * 
-     * @param employee the EmployeeInfo to save
+     * @param newEmployeeData the Employee entity to save
      * @return the saved Employee entity
+     * @throws LookupException if an error occurs during save
+     * @throws InvalidArgumentException if employee data is invalid
      */
     @Transactional
     private Employee saveData(Employee newEmployeeData) throws LookupException, InvalidArgumentException {
@@ -129,7 +132,14 @@ public class EmployeeService extends AbstractDundieService {
     public long getEmployeeCount(Long organizationId) {
         return employeeRepository.countEmployeesByOrganization(organizationId);
     }
-    
+
+    /**
+     * Get employee entity by id
+     * 
+     * @param employeeId the id of the employee
+     * @return Employee entity
+     * @throws LookupException if employee is not found
+     */
     private Employee getEmployeeData(Long employeeId) throws LookupException {
         Optional<Employee> existingEmployee = employeeRepository.findById(employeeId);
         if (!existingEmployee.isPresent()) {
@@ -145,7 +155,9 @@ public class EmployeeService extends AbstractDundieService {
      * 
      * @param id the id of the employee to update
      * @param employeeInfo the new employee details
-     * @return EmployeeInfo record of updated employee or throws a runtime exception if not found
+     * @return EmployeeInfo record of updated employee
+     * @throws LookupException if employee is not found
+     * @throws InvalidArgumentException if id or employeeInfo is null
      */
     @Transactional
     public EmployeeInfo update(Long id, EmployeeInfo employeeInfo) throws LookupException, InvalidArgumentException {
@@ -181,7 +193,9 @@ public class EmployeeService extends AbstractDundieService {
      * Delete employee by id
      * 
      * @param id the id of the employee to delete
-     * @return EmployeeInfo of deleted employee or throws a runtime exception if not found
+     * @return EmployeeInfo of deleted employee
+     * @throws LookupException if employee is not found
+     * @throws InvalidArgumentException if id is null
      */
     @Transactional
     public EmployeeInfo delete(Long id) throws LookupException, InvalidArgumentException {
@@ -202,6 +216,8 @@ public class EmployeeService extends AbstractDundieService {
      * 
      * @param organizationId the id of the organization
      * @return the number of employees updated
+     * @throws LookupException if organization is not found
+     * @throws InvalidArgumentException if organizationId is null
      */
     @Transactional
     public Long incrementDundieAwardsForAll(Long organizationId) throws LookupException, InvalidArgumentException {
@@ -223,6 +239,8 @@ public class EmployeeService extends AbstractDundieService {
      * 
      * @param organizationId the id of the organization
      * @return the total number of dundie awards for the organization
+     * @throws LookupException if organization is not found
+     * @throws InvalidArgumentException if organizationId is null
      */
     @Cacheable(value="totalAwardsByOrganization", key="#organizationId")
     public Long getTotalAwardsByOrganization(Long organizationId) throws LookupException, InvalidArgumentException {
@@ -233,9 +251,11 @@ public class EmployeeService extends AbstractDundieService {
     }
 
     /**
-     * Get total dundie awards
+     * Get total dundie awards across all organizations
      * 
      * @return the total number of dundie awards for all organizations
+     * @throws LookupException if an error occurs during retrieval
+     * @throws InvalidArgumentException if validation fails
      */
     @Cacheable(value="totalAwards")
     public Long getTotalAwards() throws LookupException, InvalidArgumentException {
@@ -261,7 +281,7 @@ public class EmployeeService extends AbstractDundieService {
      * 
      * @param organizationId the id of the organization
      */
-    @CacheEvict(value="totalAwards", key="#organizationId")
+    @CacheEvict(value="totalAwardsByOrganization", key="#organizationId")
     private void evictTotalAwardsCache(long organizationId) {
         log.debug("Total awards cache evicted for organizationId: {}", organizationId);
     }

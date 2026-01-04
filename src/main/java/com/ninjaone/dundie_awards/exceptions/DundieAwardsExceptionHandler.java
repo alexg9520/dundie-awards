@@ -15,10 +15,20 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * Global exception handler for Dundie Awards application
+ */
 @Slf4j
 @ControllerAdvice
 public class DundieAwardsExceptionHandler {
 
+    /**
+     * Handle LookupException - usually indicates resource not found
+     * 
+     * @param ex the exception
+     * @param request the HTTP request
+     * @return a ResponseEntity containing the error details
+     */
     @ExceptionHandler(LookupException.class)
     public ResponseEntity<Map<String, String>> handleLookupException(LookupException ex, HttpServletRequest request) {
         HttpStatus status = HttpStatus.NOT_FOUND;
@@ -26,6 +36,13 @@ public class DundieAwardsExceptionHandler {
         return ResponseEntity.status(status).body(errorResponse);
     }
 
+    /**
+     * Handle InvalidArgumentException - usually indicates bad input
+     * 
+     * @param ex the exception
+     * @param request the HTTP request
+     * @return a ResponseEntity containing the error details
+     */
     @ExceptionHandler(InvalidArgumentException.class)
     public ResponseEntity<Map<String, String>> handleInvalidArgumentException(InvalidArgumentException ex, HttpServletRequest request) {
         HttpStatus status = HttpStatus.BAD_REQUEST;
@@ -33,6 +50,13 @@ public class DundieAwardsExceptionHandler {
         return ResponseEntity.status(status).body(errorResponse);
     }
 
+    /**
+     * Handle DataAccessException - usually indicates DB error
+     * 
+     * @param ex the exception
+     * @param request the HTTP request
+     * @return a ResponseEntity containing the error details
+     */
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<Map<String, String>> handleDataAccessException(DataAccessException ex, HttpServletRequest request) {
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -40,6 +64,13 @@ public class DundieAwardsExceptionHandler {
         return ResponseEntity.status(status).body(errorResponse);
     }
 
+    /**
+     * Handle CannotCreateTransactionException - usually indicates DB is down
+     * 
+     * @param ex the exception
+     * @param request the HTTP request
+     * @return a ResponseEntity containing the error details
+     */
     @ExceptionHandler(CannotCreateTransactionException.class)
     public ResponseEntity<Map<String, String>> handleTransactionException(CannotCreateTransactionException ex, HttpServletRequest request) {
         HttpStatus status = HttpStatus.SERVICE_UNAVAILABLE;
@@ -47,6 +78,13 @@ public class DundieAwardsExceptionHandler {
         return ResponseEntity.status(status).body(errorResponse);
     }
 
+    /**
+     * Handle NoResourceFoundException - usually indicates resource not found
+     * 
+     * @param ex the exception
+     * @param request the HTTP request
+     * @return a ResponseEntity containing the error details
+     */
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<Map<String, String>> handleNoResourceFoundException(NoResourceFoundException ex, HttpServletRequest request) {
         HttpStatus status = HttpStatus.NOT_FOUND;
@@ -54,6 +92,13 @@ public class DundieAwardsExceptionHandler {
         return ResponseEntity.status(status).body(errorResponse);
     }
 
+    /**
+     * Handle generic Exception and log it so that it can be investigated
+     * 
+     * @param ex the exception
+     * @param request the HTTP request
+     * @return a ResponseEntity containing the error details
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGenericException(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception: {}", ex.getMessage(), ex);
@@ -62,6 +107,14 @@ public class DundieAwardsExceptionHandler {
         return ResponseEntity.status(status).body(errorResponse);
     }
 
+    /**
+     * Create a standardized error response map
+     * 
+     * @param message the error message
+     * @param status the HTTP status
+     * @param request the HTTP request
+     * @return a map containing error details
+     */ 
     private Map<String, String> createErrorResponse(String message, HttpStatus status, HttpServletRequest request) {
         Map<String, String> errorResponse = new HashMap<>();
         errorResponse.put("error", status.getReasonPhrase());

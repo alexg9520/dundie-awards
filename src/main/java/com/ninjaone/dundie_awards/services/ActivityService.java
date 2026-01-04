@@ -28,12 +28,13 @@ public class ActivityService {
     private ActivityRepository activityRepository;
 
     /**
-     * Find all activities
+     * Find all activities with pagination
      * 
      * @param page the page number
      * @param size the page size
      * @param sortBy the field to sort by
      * @return Page<ActivityInfo> of all activities
+     * @throws InvalidArgumentException if pagination parameters are invalid
      */
     public Page<ActivityInfo> findAll(int page, int size, String sortBy) throws InvalidArgumentException {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).ascending());
@@ -41,11 +42,11 @@ public class ActivityService {
     }
 
     /**
-     * Find all activities
+     * Find all activities with pagination
      * 
      * @param pageable the pagination information
      * @return Page<ActivityInfo> of all activities
-     * @throws InvalidArgumentException 
+     * @throws InvalidArgumentException if pageable is null
      */
     public Page<ActivityInfo> findAll(Pageable pageable) throws InvalidArgumentException {
         checkForNullValue(pageable, "Pageable is null", "No pagination information provided");
@@ -57,8 +58,8 @@ public class ActivityService {
      * Save activity info to the repository
      * 
      * @param activityInfo the activity info to save
-     * @return the saved Activity
-     * @throws InvalidArgumentException 
+     * @return the saved ActivityInfo record
+     * @throws InvalidArgumentException if activityInfo is null
      */
     public ActivityInfo save(ActivityInfo activityInfo) throws InvalidArgumentException {
         checkForNullValue(activityInfo, "ActivityInfo is null", "No activity info provided");
@@ -69,9 +70,9 @@ public class ActivityService {
     /**
      * Create ActivityInfo from Activity
      * 
-     * @param employee the Employee entity
+     * @param activity the Activity entity
      * @return ActivityInfo record
-     * @throws InvalidArgumentException 
+     * @throws InvalidArgumentException if activity is null
      */
     public ActivityInfo createActivityInfoFromActivity(Activity activity) throws InvalidArgumentException {
         checkForNullValue(activity, "Activity is null", "No activity was provided");
@@ -79,11 +80,10 @@ public class ActivityService {
     }
 
     /**
-     * Create ActivityInfo from Activity
+     * Create ActivityInfo from Activity without null check
      * 
-     * @param employee the Employee entity
+     * @param activity the Activity entity
      * @return ActivityInfo record
-     * @throws InvalidArgumentException 
      */
     private ActivityInfo createActivityInfoFromActivityNoCheck(Activity activity)  {
         ActivityInfo activityInfo = ActivityInfo.builder()
