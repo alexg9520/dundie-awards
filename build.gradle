@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '4.0.0'
 	id 'io.spring.dependency-management' version '1.1.5'
+	id 'application'
 }
 
 group = 'com.ninjaone'
@@ -39,8 +40,17 @@ dependencies {
 	testImplementation 'org.testcontainers:testcontainers-junit-jupiter:2.0.3'
 	testImplementation 'org.springframework.boot:spring-boot-testcontainers'
 	runtimeOnly 'org.postgresql:postgresql:42.7.8'
+	testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+ext {
+   javaMainClass = "com.ninjaone.dundie_awards.DundieAwardsApplication"
+}
+
+application {
+    mainClassName = javaMainClass
 }
