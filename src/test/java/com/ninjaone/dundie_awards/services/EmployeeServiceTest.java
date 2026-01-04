@@ -455,4 +455,174 @@ class EmployeeServiceTest {
                 .isInstanceOf(InvalidArgumentException.class)
                 .hasMessageContaining("No organization was provided");
     }
+
+    // ========== Transactional Behavior Tests ==========
+
+    @Test
+    @DisplayName("@Transactional update - should rollback when save operation fails")
+    void update_WhenSaveFails_ShouldRollback() throws LookupException {
+        // Arrange
+        EmployeeInfo updatedInfo = EmployeeInfo.builder()
+                .id(1L)
+                .firstName("Michael")
+                .lastName("Scarn")
+                .organization(testOrganizationInfo)
+                .dundieAwards(5)
+                .build();
+
+        when(employeeRepository.findById(1L)).thenReturn(Optional.of(testEmployee));
+        when(organizationService.getOrganizationData(1L)).thenReturn(testOrganization);
+        // Simulate database exception during save
+        when(employeeRepository.save(any(Employee.class)))
+                .thenThrow(new org.springframework.dao.DataIntegrityViolationException(
+                        "Unique constraint violation"));
+
+        // Act & Assert
+        assertThatThrownBy(() -> employeeService.update(1L, updatedInfo))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+
+        // Verify save was attempted but transaction should rollback
+        verify(employeeRepository, times(1)).save(any(Employee.class));
+    }
+
+    @Test
+    @DisplayName("@Transactional delete - should rollback when delete operation fails")
+    void delete_WhenDeleteFails_ShouldRollback() {
+        // Arrange
+        when(employeeRepository.findById(1L)).thenReturn(Optional.of(testEmployee));
+        org.mockito.Mockito.doThrow(new RuntimeException("Cannot delete employee with active relationships"))
+                .when(employeeRepository).delete(any(Employee.class));
+
+        // Act & Assert
+        assertThatThrownBy(() -> employeeService.delete(1L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Cannot delete employee with active relationships");
+
+        // Verify delete was attempted but should rollback
+        verify(employeeRepository, times(1)).delete(any(Employee.class));
+    }
+
+    @Test
+    @DisplayName("@Transactional incrementDundieAwardsForAll - should rollback if message send fails")
+    void incrementDundieAwardsForAll_WhenMessageSendFails_ShouldRollback() throws LookupException {
+        ReflectionTestUtils.setField(employeeService, "activityBindingName", "activity-out-0");
+
+        // Arrange
+        when(organizationService.getOrganizationData(1L)).thenReturn(testOrganization);
+        when(employeeRepository.incrementDundieAwardsForAll(1L)).thenReturn(5L);
+        // Simulate message broker failure
+        when(streamBridge.send(anyString(), any(ActivityInfo.class)))
+                .thenThrow(new RuntimeException("Message broker unavailable"));
+
+        // Act & Assert
+        assertThatThrownBy(() -> employeeService.incrementDundieAwardsForAll(1L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Message broker unavailable");
+
+        // Verify database update was attempted but should rollback due to transaction
+        verify(employeeRepository, times(1)).incrementDundieAwardsForAll(1L);
+        verify(streamBridge, times(1)).send(anyString(), any(ActivityInfo.class));
+    }
+
+    @Test
+    @DisplayName("@Transactional incrementDundieAwardsForAll - all operations should be atomic")
+    void incrementDundieAwardsForAll_AllOperations_ShouldBeAtomic() throws LookupException, InvalidArgumentException {
+        ReflectionTestUtils.setField(employeeService, "activityBindingName", "activity-out-0");
+
+        // Arrange
+        when(organizationService.getOrganizationData(1L)).thenReturn(testOrganization);
+        when(employeeRepository.incrementDundieAwardsForAll(1L)).thenReturn(5L);
+        when(streamBridge.send(anyString(), any(ActivityInfo.class))).thenReturn(true);
+
+        // Act
+        Long result = employeeService.incrementDundieAwardsForAll(1L);
+
+        // Assert - all operations completed successfully in transaction
+        assertEquals(5L, result);
+        
+        // Verify transaction operations order
+        var inOrder = org.mockito.Mockito.inOrder(organizationService, employeeRepository, streamBridge);
+        inOrder.verify(organizationService).getOrganizationData(1L);
+        inOrder.verify(employeeRepository).incrementDundieAwardsForAll(1L);
+        inOrder.verify(streamBridge).send(anyString(), any(ActivityInfo.class));
+    }
+
+    @Test
+    @DisplayName("@Transactional update - should handle organization lookup failure in transaction")
+    void update_WhenOrganizationLookupFails_ShouldRollback() throws LookupException {
+        // Arrange
+        EmployeeInfo updatedInfo = EmployeeInfo.builder()
+                .id(1L)
+                .firstName("Michael")
+                .lastName("Scott")
+                .organization(OrganizationInfo.builder().id(999L).name("Unknown").build())
+                .dundieAwards(5)
+                .build();
+
+        when(employeeRepository.findById(1L)).thenReturn(Optional.of(testEmployee));
+        // Organization lookup fails within transaction
+        when(organizationService.getOrganizationData(999L))
+                .thenThrow(new LookupException("The organization was not found"));
+
+        // Act & Assert
+        assertThatThrownBy(() -> employeeService.update(1L, updatedInfo))
+                .isInstanceOf(LookupException.class)
+                .hasMessageContaining("The organization was not found");
+
+        // Verify no save was attempted after lookup failed
+        verify(organizationService, times(1)).getOrganizationData(999L);
+        verify(employeeRepository, never()).save(any(Employee.class));
+    }
+
+    @Test
+    @DisplayName("@Transactional delete - should complete all cache evictions in transaction")
+    void delete_WithCacheEviction_ShouldBeAtomic() throws LookupException, InvalidArgumentException {
+        // Arrange
+        when(employeeRepository.findById(1L)).thenReturn(Optional.of(testEmployee));
+
+        // Act
+        EmployeeInfo result = employeeService.delete(1L);
+
+        // Assert - verify all operations completed
+        assertNotNull(result);
+        assertEquals("Michael", result.firstName());
+        
+        // Verify transaction operations completed in order
+        var inOrder = org.mockito.Mockito.inOrder(employeeRepository);
+        inOrder.verify(employeeRepository).findById(1L);
+        inOrder.verify(employeeRepository).delete(testEmployee);
+    }
+
+    @Test
+    @DisplayName("@Transactional update - multiple database operations should complete atomically")
+    void update_MultipleOperations_ShouldCompleteAtomically() throws LookupException, InvalidArgumentException {
+        // Arrange
+        EmployeeInfo updatedInfo = EmployeeInfo.builder()
+                .id(1L)
+                .firstName("Michael")
+                .lastName("Scarn")
+                .organization(testOrganizationInfo)
+                .dundieAwards(5)
+                .build();
+
+        Employee updatedEmployee = new Employee("Michael", "Scarn", testOrganization);
+        updatedEmployee.setId(1L);
+
+        when(employeeRepository.findById(1L)).thenReturn(Optional.of(testEmployee));
+        when(organizationService.getOrganizationData(1L)).thenReturn(testOrganization);
+        when(employeeRepository.save(any(Employee.class))).thenReturn(updatedEmployee);
+
+        // Act
+        EmployeeInfo result = employeeService.update(1L, updatedInfo);
+
+        // Assert - verify all operations in transaction completed successfully
+        assertNotNull(result);
+        assertEquals("Scarn", result.lastName());
+        
+        // Verify transaction operations completed in order
+        var inOrder = org.mockito.Mockito.inOrder(employeeRepository, organizationService);
+        inOrder.verify(employeeRepository).findById(1L);
+        inOrder.verify(organizationService).getOrganizationData(1L);
+        inOrder.verify(employeeRepository).save(any(Employee.class));
+    }
 }
