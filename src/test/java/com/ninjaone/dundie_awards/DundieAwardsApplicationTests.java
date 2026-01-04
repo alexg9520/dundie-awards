@@ -22,12 +22,12 @@ import com.ninjaone.dundie_awards.model.ActivityInfo;
 @SpringBootTest
 @Testcontainers
 @TestPropertySource(properties = {
-    "spring.cloud.stream.binding.out=activity-out-0"
+    "DUNDIE_SPRING_CLOUD_STREAM_BINDING_OUT=activity-out-0"
 })
 
 public class DundieAwardsApplicationTests {
 
-	@Value("${spring.cloud.stream.binding.out}")
+	@Value("${DUNDIE_SPRING_CLOUD_STREAM_BINDING_OUT}")
 	private String activityBindingName;
 
 	@Container

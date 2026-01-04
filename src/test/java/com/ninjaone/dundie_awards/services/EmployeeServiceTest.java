@@ -23,6 +23,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ninjaone.dundie_awards.exceptions.InvalidArgumentException;
@@ -44,6 +47,9 @@ class EmployeeServiceTest {
 
     @Mock
     private OrganizationRepository organizationRepository;
+
+    @Mock
+    private OrganizationService organizationService;
 
     @Mock
     private StreamBridge streamBridge;
@@ -81,27 +87,29 @@ class EmployeeServiceTest {
 
     @Test
     @DisplayName("findAll - should return all employees as EmployeeInfo")
-    void findAll_ShouldReturnAllEmployees() {
+    void findAll_ShouldReturnAllEmployees() throws InvalidArgumentException {
         // Arrange
         Employee employee2 = new Employee("Jim", "Halpert", testOrganization);
         employee2.setId(2L);
         employee2.setDundieAwards(3);
 
-        when(employeeRepository.findAll()).thenReturn(Arrays.asList(testEmployee, employee2));
+        Pageable pageable = PageRequest.of(0, 100, Sort.by("id").ascending());
+        when(employeeRepository.findAll(any(Pageable.class))).thenReturn(
+            new org.springframework.data.domain.PageImpl<>(Arrays.asList(testEmployee, employee2)));
 
         // Act
-        List<EmployeeInfo> result = employeeService.findAll();
+        List<EmployeeInfo> result = employeeService.findAll(pageable).getContent();
 
         // Assert
         assertThat(result).hasSize(2);
         assertEquals("Michael", result.get(0).firstName());
         assertEquals("Jim", result.get(1).firstName());
-        verify(employeeRepository, times(1)).findAll();
+        verify(employeeRepository, times(1)).findAll(pageable);
     }
 
     @Test
     @DisplayName("getEmployeeInfoById - should return employee when found")
-    void getEmployeeInfoById_WhenEmployeeExists_ShouldReturnEmployee() {
+    void getEmployeeInfoById_WhenEmployeeExists_ShouldReturnEmployee() throws LookupException, InvalidArgumentException {
         // Arrange
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(testEmployee));
 
@@ -143,7 +151,7 @@ class EmployeeServiceTest {
 
     @Test
     @DisplayName("save - should save new employee successfully")
-    void save_WithValidEmployeeInfo_ShouldSaveEmployee() {
+    void save_WithValidEmployeeInfo_ShouldSaveEmployee() throws LookupException, InvalidArgumentException {
         // Arrange
         EmployeeInfo newEmployeeInfo = EmployeeInfo.builder()
                 .firstName("Pam")
@@ -155,17 +163,17 @@ class EmployeeServiceTest {
         Employee savedEmployee = new Employee("Pam", "Beesly", testOrganization);
         savedEmployee.setId(3L);
 
-        when(organizationRepository.findById(1L)).thenReturn(Optional.of(testOrganization));
+        when(organizationService.getOrganizationData(1L)).thenReturn(testOrganization);
         when(employeeRepository.save(any(Employee.class))).thenReturn(savedEmployee);
 
         // Act
-        Employee result = employeeService.save(newEmployeeInfo);
+        EmployeeInfo result = employeeService.save(newEmployeeInfo);
 
         // Assert
         assertNotNull(result);
-        assertEquals("Pam", result.getFirstName());
-        assertEquals("Beesly", result.getLastName());
-        verify(organizationRepository, times(1)).findById(1L);
+        assertEquals("Pam", result.firstName());
+        assertEquals("Beesly", result.lastName());
+        verify(organizationService, times(1)).getOrganizationData(1L);
         verify(employeeRepository, times(1)).save(any(Employee.class));
     }
 
@@ -182,9 +190,10 @@ class EmployeeServiceTest {
 
     @Test
     @DisplayName("save - should throw exception when organization not found")
-    void save_WhenOrganizationNotFound_ShouldThrowException() {
+    void save_WhenOrganizationNotFound_ShouldThrowException() throws LookupException {
         // Arrange
-        when(organizationRepository.findById(999L)).thenReturn(Optional.empty());
+        when(organizationService.getOrganizationData(999L))
+                .thenThrow(new LookupException("The organization was not found"));
 
         EmployeeInfo newEmployeeInfo = EmployeeInfo.builder()
                 .firstName("Pam")
@@ -198,13 +207,13 @@ class EmployeeServiceTest {
                 .isInstanceOf(LookupException.class)
                 .hasMessageContaining("The organization was not found");
 
-        verify(organizationRepository, times(1)).findById(999L);
+        verify(organizationService, times(1)).getOrganizationData(999L);
         verify(employeeRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("update - should update employee successfully")
-    void update_WhenEmployeeExists_ShouldUpdateEmployee() {
+    void update_WhenEmployeeExists_ShouldUpdateEmployee() throws LookupException, InvalidArgumentException {
         // Arrange
         EmployeeInfo updatedInfo = EmployeeInfo.builder()
                 .id(1L)
@@ -215,7 +224,7 @@ class EmployeeServiceTest {
                 .build();
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(testEmployee));
-        when(organizationRepository.findById(1L)).thenReturn(Optional.of(testOrganization));
+        when(organizationService.getOrganizationData(1L)).thenReturn(testOrganization);
         when(employeeRepository.save(any(Employee.class))).thenReturn(testEmployee);
 
         // Act
@@ -267,7 +276,7 @@ class EmployeeServiceTest {
 
     @Test
     @DisplayName("delete - should delete employee successfully")
-    void delete_WhenEmployeeExists_ShouldDeleteEmployee() {
+    void delete_WhenEmployeeExists_ShouldDeleteEmployee() throws LookupException, InvalidArgumentException {
         // Arrange
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(testEmployee));
 
@@ -309,11 +318,11 @@ class EmployeeServiceTest {
 
     @Test
     @DisplayName("incrementDundieAwardsForAll - should increment awards for organization")
-    void incrementDundieAwardsForAll_ShouldIncrementAwards() {
+    void incrementDundieAwardsForAll_ShouldIncrementAwards() throws LookupException, InvalidArgumentException {
         ReflectionTestUtils.setField(employeeService, "activityBindingName", "activity-out-0");
 
         // Arrange
-        when(organizationRepository.findById(1L)).thenReturn(Optional.of(testOrganization));
+        when(organizationService.getOrganizationData(1L)).thenReturn(testOrganization);
         when(employeeRepository.incrementDundieAwardsForAll(1L)).thenReturn(5L);
         when(streamBridge.send(anyString(), any(ActivityInfo.class))).thenReturn(true);
 
@@ -322,31 +331,32 @@ class EmployeeServiceTest {
 
         // Assert
         assertEquals(5L, result);
-        verify(organizationRepository, times(1)).findById(1L);
+        verify(organizationService, times(1)).getOrganizationData(1L);
         verify(employeeRepository, times(1)).incrementDundieAwardsForAll(1L);
         verify(streamBridge, times(1)).send(anyString(), any(ActivityInfo.class));
     }
 
     @Test
     @DisplayName("incrementDundieAwardsForAll - should throw exception when organization not found")
-    void incrementDundieAwardsForAll_WhenOrganizationNotFound_ShouldThrowException() {
+    void incrementDundieAwardsForAll_WhenOrganizationNotFound_ShouldThrowException() throws LookupException {
         // Arrange
-        when(organizationRepository.findById(999L)).thenReturn(Optional.empty());
+        when(organizationService.getOrganizationData(999L))
+                .thenThrow(new LookupException("The organization was not found"));
 
         // Act & Assert
         assertThatThrownBy(() -> employeeService.incrementDundieAwardsForAll(999L))
                 .isInstanceOf(LookupException.class)
                 .hasMessageContaining("The organization was not found");
 
-        verify(organizationRepository, times(1)).findById(999L);
+        verify(organizationService, times(1)).getOrganizationData(999L);
         verify(employeeRepository, never()).incrementDundieAwardsForAll(any());
     }
 
     @Test
     @DisplayName("getTotalAwardsByOrganization - should return total awards")
-    void getTotalAwardsByOrganization_ShouldReturnTotalAwards() {
+    void getTotalAwardsByOrganization_ShouldReturnTotalAwards() throws LookupException, InvalidArgumentException {
         // Arrange
-        when(organizationRepository.findById(1L)).thenReturn(Optional.of(testOrganization));
+        when(organizationService.getOrganizationData(1L)).thenReturn(testOrganization);
         when(employeeRepository.getTotalAwardsByOrganization(1L)).thenReturn(Optional.of(25L));
 
         // Act
@@ -354,15 +364,15 @@ class EmployeeServiceTest {
 
         // Assert
         assertThat(result).isEqualTo(25L);
-        verify(organizationRepository, times(1)).findById(1L);
+        verify(organizationService, times(1)).getOrganizationData(1L);
         verify(employeeRepository, times(1)).getTotalAwardsByOrganization(1L);
     }
 
     @Test
     @DisplayName("getTotalAwardsByOrganization - should return 0 when no awards found")
-    void getTotalAwardsByOrganization_WhenNoAwards_ShouldReturnZero() {
+    void getTotalAwardsByOrganization_WhenNoAwards_ShouldReturnZero() throws LookupException, InvalidArgumentException {
         // Arrange
-        when(organizationRepository.findById(1L)).thenReturn(Optional.of(testOrganization));
+        when(organizationService.getOrganizationData(1L)).thenReturn(testOrganization);
         when(employeeRepository.getTotalAwardsByOrganization(1L)).thenReturn(Optional.empty());
 
         // Act
@@ -370,13 +380,13 @@ class EmployeeServiceTest {
 
         // Assert
         assertThat(result).isEqualTo(0L);
-        verify(organizationRepository, times(1)).findById(1L);
+        verify(organizationService, times(1)).getOrganizationData(1L);
         verify(employeeRepository, times(1)).getTotalAwardsByOrganization(1L);
     }
 
     @Test
     @DisplayName("getTotalAwards - should return total awards across all organizations")
-    void getTotalAwards_ShouldReturnTotalAwards() {
+    void getTotalAwards_ShouldReturnTotalAwards() throws LookupException, InvalidArgumentException {
         // Arrange
         when(employeeRepository.getTotalAwards()).thenReturn(Optional.of(100L));
 
@@ -390,7 +400,7 @@ class EmployeeServiceTest {
 
     @Test
     @DisplayName("getTotalAwards - should return 0 when no awards found")
-    void getTotalAwards_WhenNoAwards_ShouldReturnZero() {
+    void getTotalAwards_WhenNoAwards_ShouldReturnZero() throws LookupException, InvalidArgumentException {
         // Arrange
         when(employeeRepository.getTotalAwards()).thenReturn(Optional.empty());
 
@@ -404,7 +414,7 @@ class EmployeeServiceTest {
 
     @Test
     @DisplayName("createEmployeeInfoFromEmployee - should convert employee to info")
-    void createEmployeeInfoFromEmployee_ShouldConvertEmployee() {
+    void createEmployeeInfoFromEmployee_ShouldConvertEmployee() throws InvalidArgumentException {
         // Act
         EmployeeInfo result = employeeService.createEmployeeInfoFromEmployee(testEmployee);
 
@@ -427,7 +437,7 @@ class EmployeeServiceTest {
 
     @Test
     @DisplayName("createOrganizationInfoFromOrganization - should convert organization to info")
-    void createOrganizationInfoFromOrganization_ShouldConvertOrganization() {
+    void createOrganizationInfoFromOrganization_ShouldConvertOrganization() throws InvalidArgumentException {
         // Act
         OrganizationInfo result = employeeService.createOrganizationInfoFromOrganization(testOrganization);
 

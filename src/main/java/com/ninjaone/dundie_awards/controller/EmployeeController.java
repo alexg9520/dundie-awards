@@ -17,10 +17,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import com.ninjaone.dundie_awards.model.Employee;
+import com.ninjaone.dundie_awards.exceptions.InvalidArgumentException;
+import com.ninjaone.dundie_awards.exceptions.LookupException;
 import com.ninjaone.dundie_awards.model.EmployeeInfo;
 import com.ninjaone.dundie_awards.model.OrganizationInfo;
 import com.ninjaone.dundie_awards.services.EmployeeService;
+
+import jakarta.validation.Valid;
 
 // TODO: Needs security
 @Controller
@@ -33,17 +36,15 @@ public class EmployeeController {
     // get all employees
     @GetMapping("/employees")
     @ResponseBody
-    // TODO: needs to support pagination
-    public List<EmployeeInfo> getAllEmployees() {
+    public List<EmployeeInfo> getAllEmployees(int page, int size, String sortBy) throws InvalidArgumentException {
         // Return list of all employees
-        return employeeService.findAll();
+        return employeeService.findAll(page, size, sortBy).getContent();
     }
 
     // create employee rest api
     @PostMapping("/employees")
     @ResponseBody
-    // TODO: needs to support pagination
-    public Employee createEmployee(@RequestBody EmployeeInfo employee) {
+    public EmployeeInfo createEmployee(@Valid @RequestBody EmployeeInfo employee) throws LookupException, InvalidArgumentException {
         // Save and return the new employee
         return employeeService.save(employee);
     }
@@ -51,7 +52,7 @@ public class EmployeeController {
     // get employee by id rest api
     @GetMapping("/employees/{id}")
     @ResponseBody
-    public ResponseEntity<EmployeeInfo> getEmployeeById(@PathVariable Long id) {
+    public ResponseEntity<EmployeeInfo> getEmployeeById(@PathVariable Long id) throws LookupException, InvalidArgumentException {
         // get employee info by id
         EmployeeInfo employeeInfo = employeeService.getEmployeeInfoById(id);
         // return response entity, runtime exception will be thrown if not found
@@ -61,7 +62,7 @@ public class EmployeeController {
     // update employee rest api
     @PutMapping("/employees/{id}")
     @ResponseBody
-    public ResponseEntity<EmployeeInfo> updateEmployee(@PathVariable Long id, @RequestBody EmployeeInfo employeeDetails) {
+    public ResponseEntity<EmployeeInfo> updateEmployee(@PathVariable Long id, @Valid @RequestBody EmployeeInfo employeeDetails) throws LookupException, InvalidArgumentException {
         // update employee and get updated info
         EmployeeInfo updatedEmployee = employeeService.update(id, employeeDetails);
         // return response entity, runtime exception will be thrown if not found
@@ -71,7 +72,7 @@ public class EmployeeController {
     // delete employee rest api
     @DeleteMapping("/employees/{id}")
     @ResponseBody
-    public ResponseEntity<Map<String, Boolean>> deleteEmployee(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Boolean>> deleteEmployee(@PathVariable Long id) throws LookupException, InvalidArgumentException {
         // delete employee by id
         employeeService.delete(id);
         // return response that delete succeeded, runtime exception will be thrown if not successful
@@ -83,7 +84,7 @@ public class EmployeeController {
     // give dundie awards to every employee in an organization
     @PostMapping("/give-dundie-awards/{organizationId}")
     @ResponseBody
-    public ResponseEntity<OrganizationInfo> giveDundieAwards(@PathVariable Long organizationId) {
+    public ResponseEntity<OrganizationInfo> giveDundieAwards(@PathVariable Long organizationId) throws LookupException, InvalidArgumentException {
         // increment dundie awards for all employees in the organization
         employeeService.incrementDundieAwardsForAll(organizationId);
         // return response entity, runtime exception will be thrown if not found
@@ -93,7 +94,7 @@ public class EmployeeController {
     // get total dundie awards for an organization
     @GetMapping("/get-dundie-awards/{organizationId}")
     @ResponseBody
-    public ResponseEntity<Long> getDundieAwards(@PathVariable Long organizationId) {
+    public ResponseEntity<Long> getDundieAwards(@PathVariable Long organizationId) throws LookupException, InvalidArgumentException {
         // get total dundie awards by organization id
         Long totalAwards = employeeService.getTotalAwardsByOrganization(organizationId);
         // return response entity, runtime exception will be thrown if not found
@@ -103,7 +104,7 @@ public class EmployeeController {
     // get total dundie awards
     @GetMapping("/get-dundie-awards")
     @ResponseBody
-    public ResponseEntity<Long> getTotalDundieAwards() {
+    public ResponseEntity<Long> getTotalDundieAwards() throws LookupException, InvalidArgumentException {
         // get total dundie awards for all organizations
         return ResponseEntity.ok(employeeService.getTotalAwards());
     }

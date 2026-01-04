@@ -1,6 +1,6 @@
 package com.ninjaone.dundie_awards.exceptions;
 
-public class LookupException extends AbstractDundieRuntimeException {
+public class LookupException extends AbstractDundieException {
 
     public LookupException(String message) {
         super(message);

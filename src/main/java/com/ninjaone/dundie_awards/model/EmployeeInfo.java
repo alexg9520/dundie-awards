@@ -11,16 +11,21 @@ public record EmployeeInfo (
     @NonNull String lastName,
     @NonNull OrganizationInfo organization,
     @NonNull Integer dundieAwards) {
-          
-  public static class EmployeeInfoBuilder {
 
     // Handle null dundieAwards by setting it to 0
-    public EmployeeInfoBuilder dundieAwards(Integer dundieAwards) {
-        if (dundieAwards == null) {
-            dundieAwards = 0;
-        }
-        this.dundieAwards = dundieAwards;
-        return this;
+    public static EmployeeInfoBuilder builder() {
+        return new EmployeeInfoBuilder().dundieAwards(0);
+    }
+
+    public static class EmployeeInfoBuilder {
+      // Handle null dundieAwards by setting it to 0
+      public EmployeeInfoBuilder dundieAwards(Integer dundieAwards) {
+          if (dundieAwards == null) {
+              dundieAwards = 0;
+          }
+          this.dundieAwards = dundieAwards;
+          return this;
+      }
     }
   }
-}
+

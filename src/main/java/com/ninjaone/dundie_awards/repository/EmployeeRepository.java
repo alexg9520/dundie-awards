@@ -13,6 +13,14 @@ import com.ninjaone.dundie_awards.model.Employee;
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     /**
+     * Count employees by organization id
+     * @param organizationId the id of the organization
+     * @return the number of employees in the organization
+     */
+    @Query("SELECT COUNT(e) FROM Employee e WHERE e.organization.id = :organizationId")
+    long countEmployeesByOrganization(Long organizationId);
+
+    /**
      * Increment dundie awards for all employees in an organization
      * @param organizationId the id of the organization
      * @return the number of employees updated

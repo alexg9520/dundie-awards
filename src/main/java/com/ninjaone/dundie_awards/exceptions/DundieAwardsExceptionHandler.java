@@ -20,14 +20,14 @@ import lombok.extern.slf4j.Slf4j;
 public class DundieAwardsExceptionHandler {
 
     @ExceptionHandler(LookupException.class)
-    public ResponseEntity<Map<String, String>> handleLookupException(AbstractDundieRuntimeException ex, HttpServletRequest request) {
+    public ResponseEntity<Map<String, String>> handleLookupException(LookupException ex, HttpServletRequest request) {
         HttpStatus status = HttpStatus.NOT_FOUND;
         Map<String, String> errorResponse = createErrorResponse(ex.getMessage(), status, request);
         return ResponseEntity.status(status).body(errorResponse);
     }
 
     @ExceptionHandler(InvalidArgumentException.class)
-    public ResponseEntity<Map<String, String>> handleInvalidArgumentException(AbstractDundieRuntimeException ex, HttpServletRequest request) {
+    public ResponseEntity<Map<String, String>> handleInvalidArgumentException(InvalidArgumentException ex, HttpServletRequest request) {
         HttpStatus status = HttpStatus.BAD_REQUEST;
         Map<String, String> errorResponse = createErrorResponse(ex.getMessage(), status, request);
         return ResponseEntity.status(status).body(errorResponse);

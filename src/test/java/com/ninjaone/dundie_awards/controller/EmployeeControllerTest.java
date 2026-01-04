@@ -18,14 +18,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import com.ninjaone.dundie_awards.exceptions.InvalidArgumentException;
 import com.ninjaone.dundie_awards.exceptions.LookupException;
-import com.ninjaone.dundie_awards.model.Employee;
 import com.ninjaone.dundie_awards.model.EmployeeInfo;
-import com.ninjaone.dundie_awards.model.Organization;
 import com.ninjaone.dundie_awards.model.OrganizationInfo;
 import com.ninjaone.dundie_awards.services.EmployeeService;
 
@@ -40,8 +41,8 @@ class EmployeeControllerTest {
     private EmployeeController employeeController;
 
     private OrganizationInfo testOrganization;
+    
     private EmployeeInfo testEmployee;
-    private Employee testEmployeeEntity;
 
     @BeforeEach
     void setUp() {
@@ -58,13 +59,11 @@ class EmployeeControllerTest {
                 .dundieAwards(5)
                 .build();
 
-        Organization org = new Organization("Dunder Mifflin");
-        testEmployeeEntity = new Employee("Michael", "Scott", org);
     }
 
     @Test
     @DisplayName("GET /employees - should return all employees")
-    void getAllEmployees_ShouldReturnListOfEmployees() {
+    void getAllEmployees_ShouldReturnListOfEmployees() throws InvalidArgumentException {
         // Arrange
         EmployeeInfo employee2 = EmployeeInfo.builder()
                 .id(2L)
@@ -75,21 +74,22 @@ class EmployeeControllerTest {
                 .build();
 
         List<EmployeeInfo> employees = Arrays.asList(testEmployee, employee2);
-        when(employeeService.findAll()).thenReturn(employees);
+        Page<EmployeeInfo> employeePage = new PageImpl<>(employees, PageRequest.of(0, 100), employees.size());
+        when(employeeService.findAll(0, 100, "id")).thenReturn(employeePage);
 
         // Act
-        List<EmployeeInfo> result = employeeController.getAllEmployees();
+        List<EmployeeInfo> result = employeeController.getAllEmployees(0, 100, "id");
 
         // Assert
         assertThat(result).hasSize(2);
         assertThat(result.get(0).firstName()).isEqualTo("Michael");
         assertThat(result.get(1).firstName()).isEqualTo("Jim");
-        verify(employeeService, times(1)).findAll();
+        verify(employeeService, times(1)).findAll(0, 100, "id");
     }
 
     @Test
     @DisplayName("GET /employees/{id} - should return employee when found")
-    void getEmployeeById_WhenEmployeeExists_ShouldReturnEmployee() {
+    void getEmployeeById_WhenEmployeeExists_ShouldReturnEmployee() throws LookupException, InvalidArgumentException {
         // Arrange
         when(employeeService.getEmployeeInfoById(1L)).thenReturn(testEmployee);
 
@@ -106,7 +106,7 @@ class EmployeeControllerTest {
 
     @Test
     @DisplayName("GET /employees/{id} - should return InvalidArgumentException when employee not found")
-    void getEmployeeById_WhenEmployeeDoesNotExist_ShouldReturnInvalidArgumentException() {
+    void getEmployeeById_WhenEmployeeDoesNotExist_ShouldReturnInvalidArgumentException() throws LookupException, InvalidArgumentException {
         // Arrange
         when(employeeService.getEmployeeInfoById(999L)).thenThrow(new InvalidArgumentException("Employee not found"));
 
@@ -123,7 +123,7 @@ class EmployeeControllerTest {
 
     @Test
     @DisplayName("POST /employees - should create new employee")
-    void createEmployee_WithValidData_ShouldReturnCreatedEmployee() {
+    void createEmployee_WithValidData_ShouldReturnCreatedEmployee() throws LookupException, InvalidArgumentException {
         // Arrange
         EmployeeInfo newEmployee = EmployeeInfo.builder()
                 .firstName("Pam")
@@ -132,20 +132,20 @@ class EmployeeControllerTest {
                 .dundieAwards(0)
                 .build();
 
-        when(employeeService.save(any(EmployeeInfo.class))).thenReturn(testEmployeeEntity);
+        when(employeeService.save(any(EmployeeInfo.class))).thenReturn(testEmployee);
 
         // Act
-        Employee result = employeeController.createEmployee(newEmployee);
+        EmployeeInfo result = employeeController.createEmployee(newEmployee);
 
         // Assert
         assertThat(result).isNotNull();
-        assertThat(result.getFirstName()).isEqualTo("Michael");
+        assertThat(result.firstName()).isEqualTo("Michael");
         verify(employeeService, times(1)).save(any(EmployeeInfo.class));
     }
 
     @Test
     @DisplayName("PUT /employees/{id} - should update existing employee")
-    void updateEmployee_WhenEmployeeExists_ShouldReturnUpdatedEmployee() {
+    void updateEmployee_WhenEmployeeExists_ShouldReturnUpdatedEmployee() throws LookupException, InvalidArgumentException {
         // Arrange
         EmployeeInfo updatedEmployee = EmployeeInfo.builder()
                 .id(1L)
@@ -170,7 +170,7 @@ class EmployeeControllerTest {
 
     @Test
     @DisplayName("PUT /employees/{id} - should return 404 when employee not found")
-    void updateEmployee_WhenEmployeeDoesNotExist_ShouldReturnInvalidArgumentException() {
+    void updateEmployee_WhenEmployeeDoesNotExist_ShouldReturnInvalidArgumentException() throws LookupException, InvalidArgumentException {
         // Arrange
         when(employeeService.update(eq(999L), any(EmployeeInfo.class)))
                 .thenThrow(new InvalidArgumentException("Employee not found"));
@@ -187,7 +187,7 @@ class EmployeeControllerTest {
 
     @Test
     @DisplayName("DELETE /employees/{id} - should delete employee successfully")
-    void deleteEmployee_WhenEmployeeExists_ShouldReturnSuccessResponse() {
+    void deleteEmployee_WhenEmployeeExists_ShouldReturnSuccessResponse() throws LookupException, InvalidArgumentException {
         // Arrange
         when(employeeService.delete(1L)).thenReturn(testEmployee);
 
@@ -203,7 +203,7 @@ class EmployeeControllerTest {
 
     @Test
     @DisplayName("DELETE /employees/{id} - should return 404 when employee not found")
-    void deleteEmployee_WhenEmployeeDoesNotExist_ShouldReturnInvalidArgumentException() {
+    void deleteEmployee_WhenEmployeeDoesNotExist_ShouldReturnInvalidArgumentException() throws LookupException, InvalidArgumentException {
         // Arrange
         when(employeeService.delete(999L)).thenThrow(new InvalidArgumentException("Employee not found"));
 
@@ -221,7 +221,7 @@ class EmployeeControllerTest {
 
     @Test
     @DisplayName("DELETE /employees/{id} - should return 404 when id is null")
-    void deleteEmployee_WhenIdIsNull_ShouldReturnInvalidArgumentException() {
+    void deleteEmployee_WhenIdIsNull_ShouldReturnInvalidArgumentException() throws LookupException, InvalidArgumentException {
 
         try {
             // Act
@@ -237,7 +237,7 @@ class EmployeeControllerTest {
 
     @Test
     @DisplayName("POST /give-dundie-awards/{organizationId} - should increment awards successfully")
-    void giveDundieAwards_WhenOrganizationExists_ShouldReturnOk() {
+    void giveDundieAwards_WhenOrganizationExists_ShouldReturnOk() throws LookupException, InvalidArgumentException {
         // Arrange
         when(employeeService.incrementDundieAwardsForAll(1L)).thenReturn(5L);
 
@@ -251,7 +251,7 @@ class EmployeeControllerTest {
 
     @Test
     @DisplayName("POST /give-dundie-awards/{organizationId} - should return 404 when no employees updated")
-    void giveDundieAwards_WhenNoEmployeesUpdated_ShouldReturnLookupException() {
+    void giveDundieAwards_WhenNoEmployeesUpdated_ShouldReturnLookupException() throws InvalidArgumentException, LookupException {
         // Arrange
         when(employeeService.incrementDundieAwardsForAll(1L)).thenThrow(new LookupException("No organization found"));
 
@@ -269,7 +269,7 @@ class EmployeeControllerTest {
 
     @Test
     @DisplayName("POST /give-dundie-awards/{organizationId} - should return 404 when organization id is null")
-    void giveDundieAwards_WhenOrganizationIdIsNull_ShouldReturnInvalidArgumentException() {
+    void giveDundieAwards_WhenOrganizationIdIsNull_ShouldReturnInvalidArgumentException() throws LookupException, InvalidArgumentException {
         // Arrange
         when(employeeService.incrementDundieAwardsForAll(null))
                 .thenThrow(new InvalidArgumentException("Organization ID cannot be null"));

@@ -1,6 +1,6 @@
 package com.ninjaone.dundie_awards.exceptions;
 
-public class InvalidArgumentException extends AbstractDundieRuntimeException {
+public class InvalidArgumentException extends AbstractDundieException {
 
     public InvalidArgumentException(String message) {
         super(message);

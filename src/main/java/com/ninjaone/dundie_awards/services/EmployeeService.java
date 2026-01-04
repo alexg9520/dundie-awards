@@ -1,13 +1,17 @@
 package com.ninjaone.dundie_awards.services;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import com.ninjaone.dundie_awards.exceptions.InvalidArgumentException;
@@ -16,9 +20,7 @@ import com.ninjaone.dundie_awards.model.ActivityInfo;
 import com.ninjaone.dundie_awards.model.Employee;
 import com.ninjaone.dundie_awards.model.EmployeeInfo;
 import com.ninjaone.dundie_awards.model.Organization;
-import com.ninjaone.dundie_awards.model.OrganizationInfo;
 import com.ninjaone.dundie_awards.repository.EmployeeRepository;
-import com.ninjaone.dundie_awards.repository.OrganizationRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 /** Service class for managing employees */
 @Slf4j
 @Component
-public class EmployeeService {
+public class EmployeeService extends AbstractDundieService {
 
     private static final String ACTIVITY_DUNDIE_AWARDS_INCREMENTED = "DUNDIE_AWARDS_INCREMENTED";
 
@@ -34,12 +36,12 @@ public class EmployeeService {
     private EmployeeRepository employeeRepository;
 
     @Autowired
-    private OrganizationRepository organizationRepository;
+    private OrganizationService organizationService;
 
     @Autowired
     private StreamBridge streamBridge;
 
-    @Value("${spring.cloud.stream.binding.out}")
+    @Value("${DUNDIE_SPRING_CLOUD_STREAM_BINDING_OUT}")
     private String activityBindingName;
 
     // TODO: Use transactional template for complex transactions
@@ -52,21 +54,50 @@ public class EmployeeService {
      * @param id the id of the employee
      * @return EmployeeInfo record or throws a runtime exception if not found
      */
-    public EmployeeInfo getEmployeeInfoById(Long id) {
+    public EmployeeInfo getEmployeeInfoById(Long id) throws LookupException, InvalidArgumentException {
         checkForNullValue(id, "Employee ID is null", "No employee ID was provided");
         Employee employee = getEmployeeData(id);
-        return createEmployeeInfoFromEmployee(employee);
+        return createEmployeeInfoFromEmployeeNoCheck(employee);
     }
 
     /**
      * Find all employees
      * 
-     * @return List<EmployeeInfo> of all employees
+     * @param page the page number
+     * @param size the page size
+     * @param sortBy the field to sort by
+     * @return Page<EmployeeInfo> of all employees
      */
-    // TODO: needs to support pagination
-    public List<EmployeeInfo> findAll() {
-        List<Employee> employees = employeeRepository.findAll();
-        return employees.stream().map(this::createEmployeeInfoFromEmployee).toList();
+    public Page<EmployeeInfo> findAll(int page, int size, String sortBy) throws InvalidArgumentException {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).ascending());
+        return findAll(pageable);
+    }
+
+    /**
+     * Find all employees
+     * 
+     * @param pageable the pagination information
+     * @return Page<EmployeeInfo> of all employees
+     * @throws InvalidArgumentException
+     */
+    public Page<EmployeeInfo> findAll(Pageable pageable) throws InvalidArgumentException {
+        checkForNullValue(pageable, "Pageable is null", "No pagination information provided");
+        Page<Employee> employees = employeeRepository.findAll(pageable);
+        return employees.map(this::createEmployeeInfoFromEmployeeNoCheck);
+    }    
+
+    /**
+     * Save a new employee
+     * 
+     * @param employee the EmployeeInfo to save
+     * @return the saved Employee entity
+     */
+    public EmployeeInfo save(EmployeeInfo employee) throws LookupException, InvalidArgumentException {
+        checkForNullValue(employee, "EmployeeInfo is null", "No employee information was provided");
+        Organization organizationData = organizationService.getOrganizationData(employee.organization().id());
+        Employee newEmployeeData = new Employee(employee.firstName(), employee.lastName(), organizationData);
+        Employee employeeSaveData = saveData(newEmployeeData);
+        return createEmployeeInfoFromEmployeeNoCheck(employeeSaveData);
     }
 
     /**
@@ -76,37 +107,37 @@ public class EmployeeService {
      * @return the saved Employee entity
      */
     @Transactional
-    public Employee save(EmployeeInfo employee) {
-        checkForNullValue(employee, "EmployeeInfo is null", "No employee information was provided");
-        Organization organization = getOrganizationData(employee.organization().id());
-        Employee newEmployee = new Employee(employee.firstName(), employee.lastName(), organization);
-        return employeeRepository.save(newEmployee);
+    private Employee saveData(Employee newEmployeeData) throws LookupException, InvalidArgumentException {
+        return employeeRepository.save(newEmployeeData);
     }
 
-    // TODO: Could use cache for organization lookup
-    private Organization getOrganizationData(Long organizationId) throws LookupException {
-        Organization organization = organizationRepository.findById(organizationId).orElseThrow(() -> {
-            LookupException lookupException = new LookupException("The organization was not found");
-            log.error("Invalid organization ID '{}'", organizationId, lookupException);
-            throw lookupException;
-        });
-        return organization;
+    /**
+     * Get total number of employees
+     * 
+     * @return the total number of employees
+     */
+    public long getEmployeeCount() {
+        return employeeRepository.count();
     }
 
+    /**
+     * Get total number of employees in an organization
+     * 
+     * @param organizationId the id of the organization
+     * @return the total number of employees in the organization
+     */
+    public long getEmployeeCount(Long organizationId) {
+        return employeeRepository.countEmployeesByOrganization(organizationId);
+    }
+    
     private Employee getEmployeeData(Long employeeId) throws LookupException {
-        Employee existingEmployee = employeeRepository.findById(employeeId).orElseThrow(() -> {
+        Optional<Employee> existingEmployee = employeeRepository.findById(employeeId);
+        if (!existingEmployee.isPresent()) {
             LookupException lookupException = new LookupException("The employee was not found");
             log.error("Employee not found with ID: {}", employeeId, lookupException);
             throw lookupException;
-        });
-        return existingEmployee;
-    }
-
-    protected void checkForNullValue(Object obj, String logMessage, String errorMessage) throws InvalidArgumentException {
-        if (obj == null) {
-            log.error(logMessage);
-            throw new InvalidArgumentException(errorMessage);
         }
+        return existingEmployee.get();
     }
 
     /**
@@ -117,7 +148,7 @@ public class EmployeeService {
      * @return EmployeeInfo record of updated employee or throws a runtime exception if not found
      */
     @Transactional
-    public EmployeeInfo update(Long id, EmployeeInfo employeeInfo) {
+    public EmployeeInfo update(Long id, EmployeeInfo employeeInfo) throws LookupException, InvalidArgumentException {
         checkForNullValue(id, "Employee ID is null", "No employee ID was provided");
         checkForNullValue(employeeInfo, "EmployeeInfo is null", "No employee information was provided");
         Employee employeeData = getEmployeeData(id);
@@ -126,7 +157,7 @@ public class EmployeeService {
         employeeData.setFirstName(employeeInfo.firstName());
         employeeData.setLastName(employeeInfo.lastName());
         if (employeeInfo.organization() != null) {
-            Organization organization = getOrganizationData(employeeInfo.organization().id());
+            Organization organization = organizationService.getOrganizationData(employeeInfo.organization().id());
             employeeData.setOrganization(organization);
         }
 
@@ -135,7 +166,7 @@ public class EmployeeService {
 
         // Check to see if organization has changed
         if (employeeInfo.organization().id() != employeeData.getOrganization().getId()) {
-            Organization organization = getOrganizationData(employeeInfo.organization().id());
+            Organization organization = organizationService.getOrganizationData(employeeInfo.organization().id());
             employeeData.setOrganization(organization);
             
             // Evict caches for organization since dundie awards totals may have changed
@@ -143,41 +174,8 @@ public class EmployeeService {
             evictTotalAwardsCache(employeeInfo.organization().id());
         }
 
-        return createEmployeeInfoFromEmployee(updatedEmployee);
+        return createEmployeeInfoFromEmployeeNoCheck(updatedEmployee);
     }
-    
-    /**
-     * Create EmployeeInfo from Employee entity
-     * 
-     * @param employee the Employee entity
-     * @return EmployeeInfo record
-     */
-    public EmployeeInfo createEmployeeInfoFromEmployee(Employee employee) {
-        checkForNullValue(employee, "Employee is null", "No employee was provided");
-        EmployeeInfo employeeInfo = EmployeeInfo.builder()
-                .id(employee.getId())
-                .firstName(employee.getFirstName())
-                .lastName(employee.getLastName())
-                .dundieAwards(employee.getDundieAwards())
-                .organization(createOrganizationInfoFromOrganization(employee.getOrganization()))
-                .build();
-        return employeeInfo;
-    }
-
-    /**
-     * Create OrganizationInfo from Organization entity
-     * 
-     * @param organization the Organization entity
-     * @return OrganizationInfo record
-     */
-    public OrganizationInfo createOrganizationInfoFromOrganization(Organization organization) {
-        checkForNullValue(organization, "Organization is null", "No organization was provided");
-        OrganizationInfo organizationInfo = OrganizationInfo.builder()
-                .id(organization.getId())
-                .name(organization.getName())
-                .build();
-        return organizationInfo;
-    }    
 
     /**
      * Delete employee by id
@@ -186,10 +184,10 @@ public class EmployeeService {
      * @return EmployeeInfo of deleted employee or throws a runtime exception if not found
      */
     @Transactional
-    public EmployeeInfo delete(Long id) {
+    public EmployeeInfo delete(Long id) throws LookupException, InvalidArgumentException {
         checkForNullValue(id, "Employee ID is null", "No employee ID was provided");
         Employee employee = getEmployeeData(id);
-        EmployeeInfo employeeInfo = createEmployeeInfoFromEmployee(employee);
+        EmployeeInfo employeeInfo = createEmployeeInfoFromEmployeeNoCheck(employee);
         employeeRepository.delete(employee);
 
         // Evict caches since dundie awards totals may have changed
@@ -206,10 +204,10 @@ public class EmployeeService {
      * @return the number of employees updated
      */
     @Transactional
-    public Long incrementDundieAwardsForAll(Long organizationId) {
+    public Long incrementDundieAwardsForAll(Long organizationId) throws LookupException, InvalidArgumentException {
         checkForNullValue(organizationId, "Organization ID is null", "No organization ID was provided");
         // Validate organization exists
-        Organization organization = getOrganizationData(organizationId);
+        Organization organization = organizationService.getOrganizationData(organizationId);
         long added = employeeRepository.incrementDundieAwardsForAll(organization.getId());
         
         // Evict caches
@@ -227,10 +225,10 @@ public class EmployeeService {
      * @return the total number of dundie awards for the organization
      */
     @Cacheable(value="totalAwardsByOrganization", key="#organizationId")
-    public Long getTotalAwardsByOrganization(Long organizationId) {
+    public Long getTotalAwardsByOrganization(Long organizationId) throws LookupException, InvalidArgumentException {
         checkForNullValue(organizationId, "Organization ID is null", "No organization ID was provided");
         // Validate organization exists
-        Organization organization = getOrganizationData(organizationId);
+        Organization organization = organizationService.getOrganizationData(organizationId);
         return employeeRepository.getTotalAwardsByOrganization(organization.getId()).orElse(0L);
     }
 
@@ -240,7 +238,7 @@ public class EmployeeService {
      * @return the total number of dundie awards for all organizations
      */
     @Cacheable(value="totalAwards")
-    public Long getTotalAwards() {
+    public Long getTotalAwards() throws LookupException, InvalidArgumentException {
         return employeeRepository.getTotalAwards().orElse(0L);
     }
 
@@ -267,4 +265,5 @@ public class EmployeeService {
     private void evictTotalAwardsCache(long organizationId) {
         log.debug("Total awards cache evicted for organizationId: {}", organizationId);
     }
+
 }

@@ -14,7 +14,6 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.List;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +24,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.Message;
@@ -64,24 +68,25 @@ class ActivityServiceTest {
 
     @Test
     @DisplayName("findAll - should return all activities")
-    void findAll_ShouldReturnAllActivities() {
+    void findAll_ShouldReturnAllActivities() throws InvalidArgumentException {
         // Arrange
         Activity activity2 = new Activity(LocalDateTime.now(), "EMPLOYEE_CREATED");
-        when(activityRepository.findAll()).thenReturn(Arrays.asList(testActivity, activity2));
+        Pageable pageable = PageRequest.of(0, 100, Sort.by("id").ascending());
+        when(activityRepository.findAll(pageable)).thenReturn(new PageImpl<>(Arrays.asList(testActivity, activity2)));
 
         // Act
-        List<ActivityInfo> result = activityService.findAll();
+        Page<ActivityInfo> result = activityService.findAll(0, 100, "id");
 
         // Assert
         assertThat(result).hasSize(2);
-        assertEquals("DUNDIE_AWARDS_INCREMENTED: 5", result.get(0).event());
-        assertEquals("EMPLOYEE_CREATED", result.get(1).event());
-        verify(activityRepository, times(1)).findAll();
+        assertEquals("DUNDIE_AWARDS_INCREMENTED: 5", result.getContent().get(0).event());
+        assertEquals("EMPLOYEE_CREATED", result.getContent().get(1).event());
+        verify(activityRepository, times(1)).findAll(pageable);
     }
 
     @Test
     @DisplayName("save - should save activity successfully")
-    void save_WithValidActivityInfo_ShouldSaveActivity() {
+    void save_WithValidActivityInfo_ShouldSaveActivity() throws InvalidArgumentException {
         // Arrange
         ActivityInfo newActivityInfo = ActivityInfo.builder()
                 .occuredAt(LocalDateTime.now())
@@ -113,7 +118,7 @@ class ActivityServiceTest {
 
     @Test
     @DisplayName("createActivityInfoFromActivity - should convert activity to info")
-    void createActivityInfoFromActivity_ShouldConvertActivity() {
+    void createActivityInfoFromActivity_ShouldConvertActivity() throws InvalidArgumentException {
         // Act
         ActivityInfo result = activityService.createActivityInfoFromActivity(testActivity);
 
@@ -221,7 +226,7 @@ class ActivityServiceTest {
 
     @Test
     @DisplayName("save - should preserve all activity info fields")
-    void save_ShouldPreserveAllFields() {
+    void save_ShouldPreserveAllFields() throws InvalidArgumentException {
         // Arrange
         LocalDateTime specificTime = LocalDateTime.of(2025, 12, 18, 10, 30);
         ActivityInfo activityInfo = ActivityInfo.builder()

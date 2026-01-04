@@ -1,10 +1,13 @@
 package com.ninjaone.dundie_awards.services;
 
-import java.util.List;
 import java.util.function.Consumer;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.Message;
@@ -27,21 +30,37 @@ public class ActivityService {
     /**
      * Find all activities
      * 
-     * @return List<ActivityInfo> of all activities
+     * @param page the page number
+     * @param size the page size
+     * @param sortBy the field to sort by
+     * @return Page<ActivityInfo> of all activities
      */
-    // TODO: needs to support pagination
-    public List<ActivityInfo> findAll() {
-        List<Activity> activities = activityRepository.findAll();
-        return activities.stream().map(this::createActivityInfoFromActivity).toList();
+    public Page<ActivityInfo> findAll(int page, int size, String sortBy) throws InvalidArgumentException {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).ascending());
+        return findAll(pageable);
     }
+
+    /**
+     * Find all activities
+     * 
+     * @param pageable the pagination information
+     * @return Page<ActivityInfo> of all activities
+     * @throws InvalidArgumentException 
+     */
+    public Page<ActivityInfo> findAll(Pageable pageable) throws InvalidArgumentException {
+        checkForNullValue(pageable, "Pageable is null", "No pagination information provided");
+        Page<Activity> activities = activityRepository.findAll(pageable);
+        return activities.map(this::createActivityInfoFromActivityNoCheck);
+    }  
 
     /** 
      * Save activity info to the repository
      * 
      * @param activityInfo the activity info to save
      * @return the saved Activity
+     * @throws InvalidArgumentException 
      */
-    public ActivityInfo save(ActivityInfo activityInfo) {
+    public ActivityInfo save(ActivityInfo activityInfo) throws InvalidArgumentException {
         checkForNullValue(activityInfo, "ActivityInfo is null", "No activity info provided");
         Activity newActivity = new Activity(activityInfo.occuredAt(), activityInfo.event());
         return createActivityInfoFromActivity(activityRepository.save(newActivity));
@@ -52,9 +71,21 @@ public class ActivityService {
      * 
      * @param employee the Employee entity
      * @return ActivityInfo record
+     * @throws InvalidArgumentException 
      */
-    public ActivityInfo createActivityInfoFromActivity(Activity activity) {
+    public ActivityInfo createActivityInfoFromActivity(Activity activity) throws InvalidArgumentException {
         checkForNullValue(activity, "Activity is null", "No activity was provided");
+        return createActivityInfoFromActivityNoCheck(activity);
+    }
+
+    /**
+     * Create ActivityInfo from Activity
+     * 
+     * @param employee the Employee entity
+     * @return ActivityInfo record
+     * @throws InvalidArgumentException 
+     */
+    private ActivityInfo createActivityInfoFromActivityNoCheck(Activity activity)  {
         ActivityInfo activityInfo = ActivityInfo.builder()
                 .id(activity.getId())
                 .occuredAt(activity.getOccuredAt())
@@ -84,7 +115,7 @@ public class ActivityService {
         };
     }
 
-    private void checkForNullValue(Object obj, String logMessage, String errorMessage) {
+    private void checkForNullValue(Object obj, String logMessage, String errorMessage) throws InvalidArgumentException {
         if (obj == null) {
             log.error(logMessage);
             throw new InvalidArgumentException(errorMessage);
