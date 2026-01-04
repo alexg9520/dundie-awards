@@ -93,6 +93,7 @@ class ExceptionHandlerIntegrationTest {
     @DisplayName("Should handle LookupException with 404 NOT_FOUND status")
     void handleLookupException_ReturnsNotFound() {
         // Try to get a non-existent employee
+        @SuppressWarnings("rawtypes")
         ResponseEntity<Map> response = restTemplate.getForEntity(
                 baseUrl + "/employees/999999", Map.class);
 
@@ -129,6 +130,7 @@ class ExceptionHandlerIntegrationTest {
     @DisplayName("Should handle NoResourceFoundException with 404 NOT_FOUND status")
     void handleNoResourceFoundException_ReturnsNotFound() {
         // Try to access a non-existent endpoint
+        @SuppressWarnings("rawtypes")
         ResponseEntity<Map> response = restTemplate.getForEntity(
                 baseUrl + "/nonexistent", Map.class);
 
@@ -145,6 +147,7 @@ class ExceptionHandlerIntegrationTest {
     @DisplayName("Should handle NoResourceFoundException for static resources")
     void handleNoResourceFoundException_ForStaticResource_ReturnsNotFound() {
         // Try to access a non-existent static resource
+        @SuppressWarnings("rawtypes")
         ResponseEntity<Map> response = restTemplate.getForEntity(
                 baseUrl + "/nonexistent.html", Map.class);
 
@@ -161,6 +164,7 @@ class ExceptionHandlerIntegrationTest {
     @DisplayName("Should return error response with all required fields")
     void errorResponse_ShouldContainAllRequiredFields() {
         // Any error response should have all standard fields
+        @SuppressWarnings("rawtypes")
         ResponseEntity<Map> response = restTemplate.getForEntity(
                 baseUrl + "/employees/999999", Map.class);
 
@@ -176,6 +180,7 @@ class ExceptionHandlerIntegrationTest {
     @Test
     @DisplayName("Should include timestamp in ISO format")
     void errorResponse_ShouldIncludeISOTimestamp() {
+        @SuppressWarnings("rawtypes")
         ResponseEntity<Map> response = restTemplate.getForEntity(
                 baseUrl + "/employees/999999", Map.class);
 
@@ -254,6 +259,7 @@ class ExceptionHandlerIntegrationTest {
 
         HttpEntity<String> updateRequest = new HttpEntity<>(invalidJson, headers);
 
+        @SuppressWarnings("rawtypes")
         ResponseEntity<Map> response = restTemplate.exchange(
                 baseUrl + "/employees/" + createdEmployee.id(), HttpMethod.PUT, updateRequest, Map.class);
 
@@ -321,6 +327,7 @@ class ExceptionHandlerIntegrationTest {
 
         HttpEntity<String> updateRequest = new HttpEntity<>(malformedJson, headers);
 
+        @SuppressWarnings("rawtypes")
         ResponseEntity<Map> response = restTemplate.exchange(
                 baseUrl + "/employees/" + createdEmployee.id(), HttpMethod.PUT, updateRequest, Map.class);
 
@@ -339,6 +346,7 @@ class ExceptionHandlerIntegrationTest {
     void handleIllegalStateException_ReturnsBadRequest() {
         // Try to list all employees with page and sortBy but missing size parameter
         // This should trigger IllegalStateException because size is a required parameter
+        @SuppressWarnings("rawtypes")
         ResponseEntity<Map> response = restTemplate.getForEntity(
                 baseUrl + "/employees?page=0&sortBy=id", Map.class);
 
