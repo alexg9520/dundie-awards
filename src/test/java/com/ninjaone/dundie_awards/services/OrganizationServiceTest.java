@@ -92,36 +92,6 @@ class OrganizationServiceTest {
     }
 
     @Test
-    @DisplayName("getOrganizationData - should return organization entity by id")
-    void getOrganizationData_ShouldReturnOrganization() throws LookupException {
-        // Arrange
-        when(organizationRepository.findById(1L)).thenReturn(Optional.of(testOrganization));
-
-        // Act
-        Organization result = organizationService.getOrganizationData(1L);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(1L, result.getId());
-        assertEquals("Dunder Mifflin", result.getName());
-        verify(organizationRepository, times(1)).findById(1L);
-    }
-
-    @Test
-    @DisplayName("getOrganizationData - should throw exception when organization not found")
-    void getOrganizationData_WhenOrganizationNotFound_ShouldThrowException() {
-        // Arrange
-        when(organizationRepository.findById(999L)).thenReturn(Optional.empty());
-
-        // Act & Assert
-        assertThatThrownBy(() -> organizationService.getOrganizationData(999L))
-                .isInstanceOf(LookupException.class)
-                .hasMessageContaining("The organization was not found");
-
-        verify(organizationRepository, times(1)).findById(999L);
-    }
-
-    @Test
     @DisplayName("save - should save new organization")
     void save_WithValidOrganizationInfo_ShouldSaveOrganization() throws InvalidArgumentException {
         // Arrange
@@ -235,7 +205,7 @@ class OrganizationServiceTest {
     void delete_WhenIdIsNull_ShouldThrowException() {
         // Act & Assert
         assertThatThrownBy(() -> organizationService.delete(null))
-                .isInstanceOf(InvalidArgumentException.class)
+                .isInstanceOf(LookupException.class)
                 .hasMessageContaining("No organization ID was provided");
 
         verify(organizationRepository, never()).delete(any());

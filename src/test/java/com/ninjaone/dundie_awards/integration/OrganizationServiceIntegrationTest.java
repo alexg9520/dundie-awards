@@ -3,7 +3,6 @@ package com.ninjaone.dundie_awards.integration;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -118,22 +117,6 @@ class OrganizationServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("Integration - delete should remove from database")
-    void delete_ShouldRemoveFromDatabase() throws LookupException, InvalidArgumentException {
-        // Arrange
-        Long orgId = testOrganization.getId();
-
-        // Act
-        OrganizationInfo deleted = organizationService.delete(orgId);
-
-        // Assert
-        assertEquals("Dunder Mifflin", deleted.name());
-
-        // Verify removed from database
-        assertTrue(organizationRepository.findById(orgId).isEmpty());
-    }
-
-    @Test
     @DisplayName("Integration - transactional rollback on update exception")
     void transactionalRollback_OnUpdateException() throws LookupException, InvalidArgumentException {
         // Arrange
@@ -200,12 +183,4 @@ class OrganizationServiceIntegrationTest {
                 .hasMessageContaining("The organization was not found");
     }
 
-    @Test
-    @DisplayName("Integration - delete non-existent organization should fail")
-    void delete_NonExistentOrganization_ShouldFail() {
-        // Act & Assert
-        assertThatThrownBy(() -> organizationService.delete(999L))
-                .isInstanceOf(LookupException.class)
-                .hasMessageContaining("The organization was not found");
-    }
 }

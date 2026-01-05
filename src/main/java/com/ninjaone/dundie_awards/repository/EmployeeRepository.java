@@ -43,5 +43,14 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
      */
     @Query("SELECT SUM(COALESCE(dundieAwards, 0)) FROM Employee")
     Optional<Long> getTotalAwards();
+
+    /**
+     * Delete all employees in an organization
+     * @param organizationId the id of the organization
+     * @return the number of employees deleted
+     */
+    @Modifying
+    @Query("DELETE FROM Employee e WHERE e.organization.id = :organizationId")
+    Long deleteAllByOrganizationId(Long organizationId);
 }
 

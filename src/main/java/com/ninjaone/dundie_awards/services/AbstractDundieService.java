@@ -40,6 +40,13 @@ public abstract class AbstractDundieService {
         return employeeInfo;
     }
 
+    protected Employee createEmployeeFromEmployeeInfo(EmployeeInfo employeeInfo) throws InvalidArgumentException {
+        Employee newEmployeeData = new Employee(employeeInfo.firstName(), employeeInfo.lastName(), createOrganizationFromOrganizationInfo(employeeInfo.organization()));
+        newEmployeeData.setId(employeeInfo.id());
+        newEmployeeData.setDundieAwards(employeeInfo.dundieAwards());
+        return newEmployeeData;
+    }
+
     /**
      * Create OrganizationInfo from Organization entity
      * 
@@ -63,7 +70,13 @@ public abstract class AbstractDundieService {
                 .name(organization.getName())
                 .build();
         return organizationInfo;
-    }    
+    }
+
+    protected Organization createOrganizationFromOrganizationInfo(OrganizationInfo organizationInfo) throws InvalidArgumentException {
+        Organization newOrganizationData = new Organization(organizationInfo.name());
+        newOrganizationData.setId(organizationInfo.id());
+        return newOrganizationData;
+    }
 
     protected void checkForNullValue(Object obj, String logMessage, String errorMessage) throws InvalidArgumentException {
         if (obj == null) {

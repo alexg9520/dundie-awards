@@ -19,7 +19,7 @@ import com.ninjaone.dundie_awards.exceptions.LookupException;
 import com.ninjaone.dundie_awards.model.ActivityInfo;
 import com.ninjaone.dundie_awards.model.Employee;
 import com.ninjaone.dundie_awards.model.EmployeeInfo;
-import com.ninjaone.dundie_awards.model.Organization;
+import com.ninjaone.dundie_awards.model.OrganizationInfo;
 import com.ninjaone.dundie_awards.repository.EmployeeRepository;
 
 import jakarta.transaction.Transactional;
@@ -93,10 +93,14 @@ public class EmployeeService extends AbstractDundieService {
      * @throws LookupException if organization is not found
      * @throws InvalidArgumentException if employee data is null or invalid
      */
-    public EmployeeInfo save(EmployeeInfo employee) throws LookupException, InvalidArgumentException {
-        checkForNullValue(employee, "EmployeeInfo is null", "No employee information was provided");
-        Organization organizationData = organizationService.getOrganizationData(employee.organization().id());
-        Employee newEmployeeData = new Employee(employee.firstName(), employee.lastName(), organizationData);
+    public EmployeeInfo save(EmployeeInfo employeeInfo) throws LookupException, InvalidArgumentException {
+        checkForNullValue(employeeInfo, "EmployeeInfo is null", "No employee information was provided");
+
+        // Validate organization exists
+        OrganizationInfo organizationInfo = organizationService.getOrganizationInfo(employeeInfo.organization().id());
+
+        // Only first name, last name, and organization are allowed when creating a new employee
+        Employee newEmployeeData = new Employee(employeeInfo.firstName(), employeeInfo.lastName(), createOrganizationFromOrganizationInfo(organizationInfo));
         Employee employeeSaveData = saveData(newEmployeeData);
         return createEmployeeInfoFromEmployeeNoCheck(employeeSaveData);
     }
@@ -134,6 +138,19 @@ public class EmployeeService extends AbstractDundieService {
     }
 
     /**
+     * Get EmployeeInfo by id
+     * 
+     * @param employeeId the id of the employee
+     * @return EmployeeInfo record
+     * @throws LookupException if employee is not found
+     * @throws InvalidArgumentException if employeeId is null
+     */
+    public EmployeeInfo getEmployeeInfo(Long employeeId) throws LookupException, InvalidArgumentException {
+        checkForNullValue(employeeId, "Employee ID is null", "No employee ID was provided");
+        return createEmployeeInfoFromEmployeeNoCheck(getEmployeeData(employeeId));
+    }
+
+    /**
      * Get employee entity by id
      * 
      * @param employeeId the id of the employee
@@ -141,8 +158,10 @@ public class EmployeeService extends AbstractDundieService {
      * @throws LookupException if employee is not found
      */
     private Employee getEmployeeData(Long employeeId) throws LookupException {
+        // Get employee data
         Optional<Employee> existingEmployee = employeeRepository.findById(employeeId);
         if (!existingEmployee.isPresent()) {
+            // Employee not found
             LookupException lookupException = new LookupException("The employee was not found");
             log.error("Employee not found with ID: {}", employeeId, lookupException);
             throw lookupException;
@@ -169,8 +188,8 @@ public class EmployeeService extends AbstractDundieService {
         employeeData.setFirstName(employeeInfo.firstName());
         employeeData.setLastName(employeeInfo.lastName());
         if (employeeInfo.organization() != null) {
-            Organization organization = organizationService.getOrganizationData(employeeInfo.organization().id());
-            employeeData.setOrganization(organization);
+            OrganizationInfo organizationInfo = organizationService.getOrganizationInfo(employeeInfo.organization().id());
+            employeeData.setOrganization(createOrganizationFromOrganizationInfo(organizationInfo));
         }
 
         // Save updated employee
@@ -178,8 +197,8 @@ public class EmployeeService extends AbstractDundieService {
 
         // Check to see if organization has changed
         if (employeeInfo.organization().id() != employeeData.getOrganization().getId()) {
-            Organization organization = organizationService.getOrganizationData(employeeInfo.organization().id());
-            employeeData.setOrganization(organization);
+            OrganizationInfo organizationInfo = organizationService.getOrganizationInfo(employeeInfo.organization().id());
+            employeeData.setOrganization(createOrganizationFromOrganizationInfo(organizationInfo));
             
             // Evict caches for organization since dundie awards totals may have changed
             evictTotalAwardsCache(employeeData.getOrganization().getId());
@@ -200,8 +219,12 @@ public class EmployeeService extends AbstractDundieService {
     @Transactional
     public EmployeeInfo delete(Long id) throws LookupException, InvalidArgumentException {
         checkForNullValue(id, "Employee ID is null", "No employee ID was provided");
+
+        // Get employee data
         Employee employee = getEmployeeData(id);
         EmployeeInfo employeeInfo = createEmployeeInfoFromEmployeeNoCheck(employee);
+
+        // Delete employee
         employeeRepository.delete(employee);
 
         // Evict caches since dundie awards totals may have changed
@@ -210,7 +233,21 @@ public class EmployeeService extends AbstractDundieService {
         return employeeInfo;
     }
 
-    /**
+    @Transactional
+    public OrganizationInfo deleteEmployeesAndOrganization(Long organizationId) throws LookupException, InvalidArgumentException {
+        // Validate organization exists
+        OrganizationInfo organizationInfo = organizationService.getOrganizationInfo(organizationId);
+
+        // Delete all employees in the organization
+        employeeRepository.deleteAllByOrganizationId(organizationId);
+        organizationService.delete(organizationId);
+
+        // Evict caches since dundie awards totals may have changed
+        evictCachesAfterUpdate(organizationInfo.id());
+        return organizationInfo;
+    }
+
+        /**
      * Increment dundie awards for all employees in an organization
      * The update to the database and the sending of the activity event are done transactionally
      * 
@@ -222,12 +259,13 @@ public class EmployeeService extends AbstractDundieService {
     @Transactional
     public Long incrementDundieAwardsForAll(Long organizationId) throws LookupException, InvalidArgumentException {
         checkForNullValue(organizationId, "Organization ID is null", "No organization ID was provided");
+
         // Validate organization exists
-        Organization organization = organizationService.getOrganizationData(organizationId);
-        long added = employeeRepository.incrementDundieAwardsForAll(organization.getId());
+        OrganizationInfo organizationInfo = organizationService.getOrganizationInfo(organizationId);
+        long added = employeeRepository.incrementDundieAwardsForAll(organizationInfo.id());
         
         // Evict caches
-        evictCachesAfterUpdate(organization.getId());
+        evictCachesAfterUpdate(organizationInfo.id());
 
         // Send activity event to message broker
         streamBridge.send(activityBindingName, ActivityInfo.builder().occuredAt(LocalDateTime.now()).event(ACTIVITY_DUNDIE_AWARDS_INCREMENTED + ": " + added).build());
@@ -245,9 +283,10 @@ public class EmployeeService extends AbstractDundieService {
     @Cacheable(value="totalAwardsByOrganization", key="#organizationId")
     public Long getTotalAwardsByOrganization(Long organizationId) throws LookupException, InvalidArgumentException {
         checkForNullValue(organizationId, "Organization ID is null", "No organization ID was provided");
+
         // Validate organization exists
-        Organization organization = organizationService.getOrganizationData(organizationId);
-        return employeeRepository.getTotalAwardsByOrganization(organization.getId()).orElse(0L);
+        OrganizationInfo organizationInfo = organizationService.getOrganizationInfo(organizationId);
+        return employeeRepository.getTotalAwardsByOrganization(organizationInfo.id()).orElse(0L);
     }
 
     /**

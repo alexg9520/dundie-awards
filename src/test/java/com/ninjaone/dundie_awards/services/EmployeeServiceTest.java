@@ -163,7 +163,7 @@ class EmployeeServiceTest {
         Employee savedEmployee = new Employee("Pam", "Beesly", testOrganization);
         savedEmployee.setId(3L);
 
-        when(organizationService.getOrganizationData(1L)).thenReturn(testOrganization);
+        when(organizationService.getOrganizationInfo(1L)).thenReturn(testOrganizationInfo);
         when(employeeRepository.save(any(Employee.class))).thenReturn(savedEmployee);
 
         // Act
@@ -173,7 +173,7 @@ class EmployeeServiceTest {
         assertNotNull(result);
         assertEquals("Pam", result.firstName());
         assertEquals("Beesly", result.lastName());
-        verify(organizationService, times(1)).getOrganizationData(1L);
+        verify(organizationService, times(1)).getOrganizationInfo(1L);
         verify(employeeRepository, times(1)).save(any(Employee.class));
     }
 
@@ -190,9 +190,9 @@ class EmployeeServiceTest {
 
     @Test
     @DisplayName("save - should throw exception when organization not found")
-    void save_WhenOrganizationNotFound_ShouldThrowException() throws LookupException {
+    void save_WhenOrganizationNotFound_ShouldThrowException() throws LookupException, InvalidArgumentException {
         // Arrange
-        when(organizationService.getOrganizationData(999L))
+        when(organizationService.getOrganizationInfo(999L))
                 .thenThrow(new LookupException("The organization was not found"));
 
         EmployeeInfo newEmployeeInfo = EmployeeInfo.builder()
@@ -207,7 +207,7 @@ class EmployeeServiceTest {
                 .isInstanceOf(LookupException.class)
                 .hasMessageContaining("The organization was not found");
 
-        verify(organizationService, times(1)).getOrganizationData(999L);
+        verify(organizationService, times(1)).getOrganizationInfo(999L);
         verify(employeeRepository, never()).save(any());
     }
 
@@ -224,7 +224,7 @@ class EmployeeServiceTest {
                 .build();
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(testEmployee));
-        when(organizationService.getOrganizationData(1L)).thenReturn(testOrganization);
+        when(organizationService.getOrganizationInfo(1L)).thenReturn(testOrganizationInfo);
         when(employeeRepository.save(any(Employee.class))).thenReturn(testEmployee);
 
         // Act
@@ -322,7 +322,7 @@ class EmployeeServiceTest {
         ReflectionTestUtils.setField(employeeService, "activityBindingName", "activity-out-0");
 
         // Arrange
-        when(organizationService.getOrganizationData(1L)).thenReturn(testOrganization);
+        when(organizationService.getOrganizationInfo(1L)).thenReturn(testOrganizationInfo);
         when(employeeRepository.incrementDundieAwardsForAll(1L)).thenReturn(5L);
         when(streamBridge.send(anyString(), any(ActivityInfo.class))).thenReturn(true);
 
@@ -331,16 +331,16 @@ class EmployeeServiceTest {
 
         // Assert
         assertEquals(5L, result);
-        verify(organizationService, times(1)).getOrganizationData(1L);
+        verify(organizationService, times(1)).getOrganizationInfo(1L);
         verify(employeeRepository, times(1)).incrementDundieAwardsForAll(1L);
         verify(streamBridge, times(1)).send(anyString(), any(ActivityInfo.class));
     }
 
     @Test
     @DisplayName("incrementDundieAwardsForAll - should throw exception when organization not found")
-    void incrementDundieAwardsForAll_WhenOrganizationNotFound_ShouldThrowException() throws LookupException {
+    void incrementDundieAwardsForAll_WhenOrganizationNotFound_ShouldThrowException() throws LookupException, InvalidArgumentException {
         // Arrange
-        when(organizationService.getOrganizationData(999L))
+        when(organizationService.getOrganizationInfo(999L))
                 .thenThrow(new LookupException("The organization was not found"));
 
         // Act & Assert
@@ -348,7 +348,7 @@ class EmployeeServiceTest {
                 .isInstanceOf(LookupException.class)
                 .hasMessageContaining("The organization was not found");
 
-        verify(organizationService, times(1)).getOrganizationData(999L);
+        verify(organizationService, times(1)).getOrganizationInfo(999L);
         verify(employeeRepository, never()).incrementDundieAwardsForAll(any());
     }
 
@@ -356,7 +356,7 @@ class EmployeeServiceTest {
     @DisplayName("getTotalAwardsByOrganization - should return total awards")
     void getTotalAwardsByOrganization_ShouldReturnTotalAwards() throws LookupException, InvalidArgumentException {
         // Arrange
-        when(organizationService.getOrganizationData(1L)).thenReturn(testOrganization);
+        when(organizationService.getOrganizationInfo(1L)).thenReturn(testOrganizationInfo);
         when(employeeRepository.getTotalAwardsByOrganization(1L)).thenReturn(Optional.of(25L));
 
         // Act
@@ -364,7 +364,7 @@ class EmployeeServiceTest {
 
         // Assert
         assertThat(result).isEqualTo(25L);
-        verify(organizationService, times(1)).getOrganizationData(1L);
+        verify(organizationService, times(1)).getOrganizationInfo(1L);
         verify(employeeRepository, times(1)).getTotalAwardsByOrganization(1L);
     }
 
@@ -372,7 +372,7 @@ class EmployeeServiceTest {
     @DisplayName("getTotalAwardsByOrganization - should return 0 when no awards found")
     void getTotalAwardsByOrganization_WhenNoAwards_ShouldReturnZero() throws LookupException, InvalidArgumentException {
         // Arrange
-        when(organizationService.getOrganizationData(1L)).thenReturn(testOrganization);
+        when(organizationService.getOrganizationInfo(1L)).thenReturn(testOrganizationInfo);
         when(employeeRepository.getTotalAwardsByOrganization(1L)).thenReturn(Optional.empty());
 
         // Act
@@ -380,7 +380,7 @@ class EmployeeServiceTest {
 
         // Assert
         assertThat(result).isEqualTo(0L);
-        verify(organizationService, times(1)).getOrganizationData(1L);
+        verify(organizationService, times(1)).getOrganizationInfo(1L);
         verify(employeeRepository, times(1)).getTotalAwardsByOrganization(1L);
     }
 
@@ -460,7 +460,7 @@ class EmployeeServiceTest {
 
     @Test
     @DisplayName("@Transactional update - should rollback when save operation fails")
-    void update_WhenSaveFails_ShouldRollback() throws LookupException {
+    void update_WhenSaveFails_ShouldRollback() throws LookupException, InvalidArgumentException {
         // Arrange
         EmployeeInfo updatedInfo = EmployeeInfo.builder()
                 .id(1L)
@@ -471,7 +471,7 @@ class EmployeeServiceTest {
                 .build();
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(testEmployee));
-        when(organizationService.getOrganizationData(1L)).thenReturn(testOrganization);
+        when(organizationService.getOrganizationInfo(1L)).thenReturn(testOrganizationInfo);
         // Simulate database exception during save
         when(employeeRepository.save(any(Employee.class)))
                 .thenThrow(new org.springframework.dao.DataIntegrityViolationException(
@@ -504,11 +504,11 @@ class EmployeeServiceTest {
 
     @Test
     @DisplayName("@Transactional incrementDundieAwardsForAll - should rollback if message send fails")
-    void incrementDundieAwardsForAll_WhenMessageSendFails_ShouldRollback() throws LookupException {
+    void incrementDundieAwardsForAll_WhenMessageSendFails_ShouldRollback() throws LookupException, InvalidArgumentException {
         ReflectionTestUtils.setField(employeeService, "activityBindingName", "activity-out-0");
 
         // Arrange
-        when(organizationService.getOrganizationData(1L)).thenReturn(testOrganization);
+        when(organizationService.getOrganizationInfo(1L)).thenReturn(testOrganizationInfo);
         when(employeeRepository.incrementDundieAwardsForAll(1L)).thenReturn(5L);
         // Simulate message broker failure
         when(streamBridge.send(anyString(), any(ActivityInfo.class)))
@@ -530,7 +530,7 @@ class EmployeeServiceTest {
         ReflectionTestUtils.setField(employeeService, "activityBindingName", "activity-out-0");
 
         // Arrange
-        when(organizationService.getOrganizationData(1L)).thenReturn(testOrganization);
+        when(organizationService.getOrganizationInfo(1L)).thenReturn(testOrganizationInfo);
         when(employeeRepository.incrementDundieAwardsForAll(1L)).thenReturn(5L);
         when(streamBridge.send(anyString(), any(ActivityInfo.class))).thenReturn(true);
 
@@ -542,14 +542,14 @@ class EmployeeServiceTest {
         
         // Verify transaction operations order
         var inOrder = org.mockito.Mockito.inOrder(organizationService, employeeRepository, streamBridge);
-        inOrder.verify(organizationService).getOrganizationData(1L);
+        inOrder.verify(organizationService).getOrganizationInfo(1L);
         inOrder.verify(employeeRepository).incrementDundieAwardsForAll(1L);
         inOrder.verify(streamBridge).send(anyString(), any(ActivityInfo.class));
     }
 
     @Test
     @DisplayName("@Transactional update - should handle organization lookup failure in transaction")
-    void update_WhenOrganizationLookupFails_ShouldRollback() throws LookupException {
+    void update_WhenOrganizationLookupFails_ShouldRollback() throws LookupException, InvalidArgumentException {
         // Arrange
         EmployeeInfo updatedInfo = EmployeeInfo.builder()
                 .id(1L)
@@ -561,7 +561,7 @@ class EmployeeServiceTest {
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(testEmployee));
         // Organization lookup fails within transaction
-        when(organizationService.getOrganizationData(999L))
+        when(organizationService.getOrganizationInfo(999L))
                 .thenThrow(new LookupException("The organization was not found"));
 
         // Act & Assert
@@ -570,7 +570,7 @@ class EmployeeServiceTest {
                 .hasMessageContaining("The organization was not found");
 
         // Verify no save was attempted after lookup failed
-        verify(organizationService, times(1)).getOrganizationData(999L);
+        verify(organizationService, times(1)).getOrganizationInfo(999L);
         verify(employeeRepository, never()).save(any(Employee.class));
     }
 
@@ -609,7 +609,7 @@ class EmployeeServiceTest {
         updatedEmployee.setId(1L);
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(testEmployee));
-        when(organizationService.getOrganizationData(1L)).thenReturn(testOrganization);
+        when(organizationService.getOrganizationInfo(1L)).thenReturn(testOrganizationInfo);
         when(employeeRepository.save(any(Employee.class))).thenReturn(updatedEmployee);
 
         // Act
@@ -622,7 +622,7 @@ class EmployeeServiceTest {
         // Verify transaction operations completed in order
         var inOrder = org.mockito.Mockito.inOrder(employeeRepository, organizationService);
         inOrder.verify(employeeRepository).findById(1L);
-        inOrder.verify(organizationService).getOrganizationData(1L);
+        inOrder.verify(organizationService).getOrganizationInfo(1L);
         inOrder.verify(employeeRepository).save(any(Employee.class));
     }
 }

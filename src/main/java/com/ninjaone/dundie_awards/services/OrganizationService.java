@@ -32,20 +32,20 @@ public class OrganizationService extends AbstractDundieService {
      * @throws LookupException if organization is not found
      * @throws InvalidArgumentException if organizationId is null
      */
+    @Cacheable(value="organization", key="#organizationId")
     public OrganizationInfo getOrganizationInfo(Long organizationId) throws LookupException, InvalidArgumentException {
         checkForNullValue(organizationId, "Organization ID is null", "No organization ID was provided");
         return createOrganizationInfoFromOrganizationNoCheck(getOrganizationData(organizationId));
     }
-
+    
     /**
      * Get organization entity by id with caching
      * 
      * @param organizationId the id of the organization
      * @return Organization entity
      * @throws LookupException if organization is not found
-     */
-    @Cacheable(value="organization", key="#organizationId")
-    protected Organization getOrganizationData(Long organizationId) throws LookupException {
+    */
+    private Organization getOrganizationData(Long organizationId) throws LookupException {
         Optional<Organization> organization = organizationRepository.findById(organizationId);
         if (!organization.isPresent()) {
             LookupException lookupException = new LookupException("The organization was not found");
@@ -80,7 +80,7 @@ public class OrganizationService extends AbstractDundieService {
     }
 
     /**
-     * Delete organization by id
+     * Delete organization by id. Should only be called if there are no employees in the organization.
      * 
      * @param id the id of the organization to delete
      * @return OrganizationInfo of deleted organization
@@ -88,8 +88,7 @@ public class OrganizationService extends AbstractDundieService {
      * @throws InvalidArgumentException if id is null
      */
     @Transactional
-    public OrganizationInfo delete(Long id) throws LookupException, InvalidArgumentException {
-        checkForNullValue(id, "Organization ID is null", "No organization ID was provided");
+    protected OrganizationInfo delete(Long id) throws LookupException, InvalidArgumentException {
         Organization organizationData = getOrganizationData(id);
         OrganizationInfo organizationInfo = createOrganizationInfoFromOrganizationNoCheck(organizationData);
         organizationRepository.delete(organizationData);
