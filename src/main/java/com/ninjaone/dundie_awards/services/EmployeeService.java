@@ -14,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
+import com.ninjaone.dundie_awards.cache.CacheConfig;
 import com.ninjaone.dundie_awards.exceptions.InvalidArgumentException;
 import com.ninjaone.dundie_awards.exceptions.LookupException;
 import com.ninjaone.dundie_awards.model.ActivityInfo;
@@ -29,6 +30,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Component
 public class EmployeeService extends AbstractDundieService {
+
+    private static final String CACHE_ORGANIZATION_ID = "#organizationId";
 
     private static final String ACTIVITY_DUNDIE_AWARDS_INCREMENTED = "DUNDIE_AWARDS_INCREMENTED";
 
@@ -280,7 +283,7 @@ public class EmployeeService extends AbstractDundieService {
      * @throws LookupException if organization is not found
      * @throws InvalidArgumentException if organizationId is null
      */
-    @Cacheable(value="totalAwardsByOrganization", key="#organizationId")
+    @Cacheable(cacheNames = CacheConfig.TOTAL_AWARDS_BY_ORG_CACHE, key = CACHE_ORGANIZATION_ID)
     public Long getTotalAwardsByOrganization(Long organizationId) throws LookupException, InvalidArgumentException {
         checkForNullValue(organizationId, "Organization ID is null", "No organization ID was provided");
 
@@ -296,7 +299,7 @@ public class EmployeeService extends AbstractDundieService {
      * @throws LookupException if an error occurs during retrieval
      * @throws InvalidArgumentException if validation fails
      */
-    @Cacheable(value="totalAwards")
+    @Cacheable(cacheNames = CacheConfig.TOTAL_AWARDS_CACHE)
     public Long getTotalAwards() throws LookupException, InvalidArgumentException {
         return employeeRepository.getTotalAwards().orElse(0L);
     }
@@ -311,7 +314,7 @@ public class EmployeeService extends AbstractDundieService {
     }
 
     /** Evict total awards cache */
-    @CacheEvict(value="totalAwards")
+    @CacheEvict(cacheNames = CacheConfig.TOTAL_AWARDS_CACHE)
     private void evictTotalAwardsCache() {
         log.debug("Total awards cache evicted");
     }
@@ -320,7 +323,7 @@ public class EmployeeService extends AbstractDundieService {
      * 
      * @param organizationId the id of the organization
      */
-    @CacheEvict(value="totalAwardsByOrganization", key="#organizationId")
+    @CacheEvict(cacheNames = CacheConfig.TOTAL_AWARDS_BY_ORG_CACHE, key=CACHE_ORGANIZATION_ID)
     private void evictTotalAwardsCache(long organizationId) {
         log.debug("Total awards cache evicted for organizationId: {}", organizationId);
     }

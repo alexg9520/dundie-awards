@@ -51,7 +51,7 @@ public class EmployeeController {
     /**
      * Create a new employee
      * 
-     * @param employee the employee information
+     * @param employee the employee information, id defaults to 0, as it will be generated, and dundieAwards will be set to 0
      * @return the created EmployeeInfo
      * @throws LookupException if organization is not found
      * @throws InvalidArgumentException if employee data is invalid

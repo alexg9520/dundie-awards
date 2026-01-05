@@ -7,6 +7,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 
+import com.ninjaone.dundie_awards.cache.CacheConfig;
 import com.ninjaone.dundie_awards.exceptions.InvalidArgumentException;
 import com.ninjaone.dundie_awards.exceptions.LookupException;
 import com.ninjaone.dundie_awards.model.Organization;
@@ -21,6 +22,8 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class OrganizationService extends AbstractDundieService {
 
+    private static final String CACHE_ORGANIZATION_ID = "#organizationId";
+
     @Autowired
     private OrganizationRepository organizationRepository;
 
@@ -32,7 +35,7 @@ public class OrganizationService extends AbstractDundieService {
      * @throws LookupException if organization is not found
      * @throws InvalidArgumentException if organizationId is null
      */
-    @Cacheable(value="organization", key="#organizationId")
+    @Cacheable(cacheNames = CacheConfig.ORGANIZATION_CACHE, key = CACHE_ORGANIZATION_ID)
     public OrganizationInfo getOrganizationInfo(Long organizationId) throws LookupException, InvalidArgumentException {
         checkForNullValue(organizationId, "Organization ID is null", "No organization ID was provided");
         return createOrganizationInfoFromOrganizationNoCheck(getOrganizationData(organizationId));
@@ -58,7 +61,7 @@ public class OrganizationService extends AbstractDundieService {
     /**
      * Save a new organization
      * 
-     * @param organization the OrganizationInfo to save
+     * @param organization the OrganizationInfo to save, id is ignored
      * @return the saved OrganizationInfo record
      * @throws InvalidArgumentException if organization is null
      */
@@ -136,7 +139,7 @@ public class OrganizationService extends AbstractDundieService {
      * 
      * @param organizationId the id of the organization
      */
-    @CacheEvict(value="organization", key="#organizationId")
+    @CacheEvict(cacheNames = CacheConfig.ORGANIZATION_CACHE, key = CACHE_ORGANIZATION_ID)
     private void evictOrganizationCache(long organizationId) {
         log.debug("Organization cache evicted for organizationId: {}", organizationId);
     }

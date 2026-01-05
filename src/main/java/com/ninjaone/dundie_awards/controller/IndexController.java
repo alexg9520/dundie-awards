@@ -24,7 +24,7 @@ public class IndexController {
 
     @GetMapping()
     public String getIndex(Model model) throws InvalidArgumentException, LookupException {
-        model.addAttribute("employees", employeeService.findAll(0, 100, "id").getContent());
+        model.addAttribute("employees", employeeService.findAll(0, 100, "id"));
         model.addAttribute("activities", activityService.findAll(0, 100, "id"));
         model.addAttribute("totalDundieAwards", employeeService.getTotalAwards());
         return "index";
