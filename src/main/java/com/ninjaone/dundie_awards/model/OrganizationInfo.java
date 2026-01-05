@@ -8,7 +8,7 @@ import lombok.NonNull;
 /** 
  * Record representing organization information 
  * 
- * id - the unique identifier of the organization. It defaults to 0 if null and should be generated when saved
+ * id - the unique identifier of the organization. It defaults to -1 if null and should be generated when saved
  * name - the name of the organization 
  */
 @Builder(toBuilder = true)
@@ -18,7 +18,7 @@ public record OrganizationInfo(
 
     public OrganizationInfo {
         if (id == null) {
-            id = 0L;
+            id = -1L;
         }
     }
 }

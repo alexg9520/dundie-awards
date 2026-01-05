@@ -9,7 +9,7 @@ import lombok.NonNull;
 /** 
  * Record representing employee information 
  * 
- * id - the unique identifier of the employee. It is initialized to 0 if null, and should be generated when saved
+ * id - the unique identifier of the employee. It defaults to -1, and should be generated when saved
  * firstName - the first name of the employee
  * lastName - the last name of the employee
  * organization - the organization the employee belongs to
@@ -25,17 +25,17 @@ public record EmployeeInfo (
 
     public EmployeeInfo {
         if (id == null) {
-            id = 0L;
+            id = -1L;
         }
 
         if (organization.id() == null) {
-            organization = organization.toBuilder().id(0L).build();
+            organization = organization.toBuilder().id(-1L).build();
         }
     }
 
-    // Handle null dundieAwards by setting it to 0, and Id defaults to 0
+    // Handle null dundieAwards by setting it to 0, and Id defaults to -1
     public static EmployeeInfoBuilder builder() {
-        return new EmployeeInfoBuilder().dundieAwards(0).id(0L);
+        return new EmployeeInfoBuilder().dundieAwards(0).id(-1L);
     }
 
     public static class EmployeeInfoBuilder {

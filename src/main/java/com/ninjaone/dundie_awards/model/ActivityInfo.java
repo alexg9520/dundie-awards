@@ -10,7 +10,7 @@ import lombok.NonNull;
 /** 
  * Record representing activity information 
  * 
- * id - the unique identifier of the activity. It defaults to 0 if null and should be generated when saved
+ * id - the unique identifier of the activity. It defaults to -1, and should be generated when saved
  * occuredAt - the date and time when the activity occurred
  * event - a description of the activity event
  */
@@ -22,7 +22,7 @@ public record ActivityInfo(
 
     public ActivityInfo {
         if (id == null) {
-            id = 0L;
+            id = -1L;
         }
     }
 }

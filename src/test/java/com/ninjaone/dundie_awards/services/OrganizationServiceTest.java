@@ -206,7 +206,7 @@ class OrganizationServiceTest {
         // Act & Assert
         assertThatThrownBy(() -> organizationService.delete(null))
                 .isInstanceOf(LookupException.class)
-                .hasMessageContaining("No organization ID was provided");
+                .hasMessageContaining("The organization was not found");
 
         verify(organizationRepository, never()).delete(any());
     }
